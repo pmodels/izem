@@ -104,6 +104,7 @@ AC_CONFIG_FILES([Makefile
                  maint/izem.pc
                  src/Makefile
                  test/Makefile
-                 test/lock/Makefile
+                 test/regres/Makefile
+                 test/regres/lock/Makefile
                  ])
 AC_OUTPUT
