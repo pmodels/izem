@@ -3,5 +3,5 @@
 # See COPYRIGHT in top-level directory.
 #
 
-SUBDIRS = lock
+SUBDIRS = lock queue
 DIST_SUBDIRS = $(SUBDIRS)
