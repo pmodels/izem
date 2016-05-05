@@ -34,11 +34,11 @@ m4/test-driver
 .dirstamp
 
 # code builds
-libizem.la
-src/izem.h
+libzm.la
 *.lo
 *.o
 build/
 
 # misc
 *~
+*.swp
