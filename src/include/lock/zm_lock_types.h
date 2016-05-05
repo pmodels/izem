@@ -1,11 +1,7 @@
 #ifndef _ZM_LOCK_TYPES_H
 #define _ZM_LOCK_TYPES_H
 
-#if !defined(__STDC_NO_ATOMICS__)
-#include <stdatomic.h>
-#else
-#include <opa_primitives.h>
-#endif
+#include "common/zm_common.h"
 
 typedef struct zm_ticket zm_ticket_t;
 
