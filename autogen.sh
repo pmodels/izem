@@ -34,7 +34,7 @@ fi
 ########################################################################
 
 echo_n "Updating README... "
-. ./maint/Version
+. ./maint/version
 if [ -f README.md ] ; then
     sed -e "s/%VERSION%/${ZM_VERSION}/g" README.md > README
     echo "done"
