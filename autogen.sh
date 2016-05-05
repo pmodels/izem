@@ -33,14 +33,14 @@ fi
 ## Building the README
 ########################################################################
 
-echo_n "Updating README.md... "
+echo_n "Updating README... "
 . ./maint/Version
-if [ -f README.vin ] ; then
-    sed -e "s/%VERSION%/${ZM_VERSION}/g" README.vin > README.md
+if [ -f README.md ] ; then
+    sed -e "s/%VERSION%/${ZM_VERSION}/g" README.md > README
     echo "done"
 else
     echo "error"
-    error "README.vin file not present, unable to update the README.md version number (perhaps we are running in a release tarball source tree?)"
+    error "README.md file not present, unable to update the README version number (perhaps we are running in a release tarball source tree?)"
 fi
 
 autoreconf -vif
