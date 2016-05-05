@@ -6,6 +6,7 @@
 zm_sources =
 
 include $(top_srcdir)/src/lock/Makefile.mk
+include $(top_srcdir)/src/queue/Makefile.mk
 
 include $(top_srcdir)/src/include/Makefile.mk
 
