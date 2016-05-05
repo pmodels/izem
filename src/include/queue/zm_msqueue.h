@@ -16,19 +16,20 @@ static inline int zm_msqueue_enqueue(zm_msqueue_t* q, void *data) {
         tail = atomic_load_explicit(&q->tail, memory_order_acquire);
         next = atomic_load_explicit(&((zm_msqnode_t*)tail)->next, memory_order_acquire);
         if(tail == atomic_load_explicit(&q->tail, memory_order_acquire)) {
-            if (next == NULL)
+            if (next == NULL) {
                 if (atomic_compare_exchange_weak_explicit(&((zm_msqnode_t*)tail)->next,
                                                       &next,
                                                       (zm_ptr_t)node,
                                                       memory_order_release,
                                                       memory_order_acquire))
                     break;
-            else
+            } else {
                 atomic_compare_exchange_weak_explicit(&q->tail,
                                                       &tail,
                                                       (zm_ptr_t)next,
                                                       memory_order_release,
                                                       memory_order_acquire);
+            }
         }
     }
     atomic_compare_exchange_weak_explicit(&q->tail,
