@@ -71,6 +71,50 @@ dnl ----------------------------------------------------------------------------
 # compute canonical system types
 AC_CANONICAL_HOST
 
+dnl ----------------------------------------------------------------------------
+dnl user option/feature selection
+dnl ----------------------------------------------------------------------------
+# debug options
+AC_ARG_ENABLE([debug],
+[  --enable-debug@<:@=OPTS@:>@   control the level of debugging. "OPTS" is a list of
+                          comma separated names below. Default is "none".
+                           none - no debugging
+                           yes  - add compiler flags, -g -O0 -Wall
+                           log  - enable debug event logging
+                           all  - all of the above choices],,
+[enable_debug=none])
+
+# strip off multiple options, separated by commas
+save_IFS="$IFS"
+IFS=","
+for option in $enable_debug ; do
+    case "$option" in
+        no|none)
+        ;;
+        yes)
+            debug_flags=yes
+        ;;
+        log)
+            debug_log=yes
+        ;;
+        all)
+            debug_flags=yes
+            debug_log=yes
+        ;;
+        *)
+            IFS=$save_IFS
+            AC_MSG_WARN([Unknown value $option for enable-debug])
+            IFS=","
+        ;;
+    esac
+done
+IFS="$save_IFS"
+
+AS_IF([test "x$debug_flags" = "xyes"], [CFLAGS="$CFLAGS -g -O0 -Wall"])
+AS_IF([test "x$debug_log" = "xyes"],
+    [AC_DEFINE(ZM_CONFIG_USE_DEBUG_LOG, 1, [Define to enable debug logging])])
+
+
 AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.12.3 subdir-objects])
 
 AM_SILENT_RULES([yes])
