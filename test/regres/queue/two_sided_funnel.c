@@ -16,7 +16,8 @@ struct thread_data {
     zm_msqueue_t* queue;
 };
 
-atomic_uint test_counter;
+int input = 1;
+atomic_uint test_counter = 0;
 
 static void* run(void *arg) {
     int tid;
@@ -27,14 +28,14 @@ static void* run(void *arg) {
 
     if(tid % 2 != 0) { /* producer(s) */
         for(int elem=0; elem < TEST_NELEMTS; elem++) {
-            zm_msqueue_enqueue(queue, (void*) 1);
+            zm_msqueue_enqueue(queue, (void*) &input);
         }
     } else {           /* consumer(s) */
-        while(atomic_load_explicit(&test_counter, memory_order_acquire) < TEST_NELEMTS) {
-            int* elem;
-            zm_msqueue_dequeue(queue, (void*)elem);
-            if ((int)(intptr_t)elem == 1)
-                atomic_fetch_add_explicit(&test_counter, 1, memory_order_acq_rel);
+        while(atomic_load_explicit(&test_counter, memory_order_acquire) < (TEST_NTHREADS/2)*TEST_NELEMTS) {
+            int* elem = NULL;
+            zm_msqueue_dequeue(queue, (void**)&elem);
+            if ((elem != NULL) && (*elem == 1))
+                    atomic_fetch_add_explicit(&test_counter, 1, memory_order_acq_rel);
         }
 
     }
