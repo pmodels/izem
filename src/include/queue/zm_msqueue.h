@@ -40,7 +40,7 @@ static inline int zm_msqueue_enqueue(zm_msqueue_t* q, void *data) {
     return 0;
 }
 
-static inline int zm_msqueue_dequeue(zm_msqueue_t* q, void *data) {
+static inline int zm_msqueue_dequeue(zm_msqueue_t* q, void **data) {
     zm_ptr_t head;
     zm_ptr_t tail;
     zm_ptr_t next;
@@ -57,13 +57,14 @@ static inline int zm_msqueue_dequeue(zm_msqueue_t* q, void *data) {
                                                       memory_order_release,
                                                       memory_order_acquire);
             } else {
-                data = ((zm_msqnode_t*)next)->data;
                 if (atomic_compare_exchange_weak_explicit(&q->head,
                                                       &head,
                                                       (zm_ptr_t)next,
                                                       memory_order_release,
-                                                      memory_order_acquire))
-                        break;
+                                                      memory_order_acquire)) {
+                    *data = ((zm_msqnode_t*)next)->data;
+                    break;
+                }
             }
         }
     }
