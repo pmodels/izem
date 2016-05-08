@@ -4,5 +4,6 @@
 #
 
 zm_sources += \
+	queue/zm_glqueue.c \
 	queue/zm_msqueue.c
 
