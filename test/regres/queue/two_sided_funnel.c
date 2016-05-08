@@ -5,15 +5,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <queue/zm_msqueue.h>
-
+#include "zmtest_absqueue.h"
 #define TEST_NTHREADS 4
 #define TEST_NELEMTS  1000
 
 typedef struct thread_data thread_data_t;
 struct thread_data {
     int tid;
-    zm_msqueue_t* queue;
+    zm_absqueue_t* queue;
 };
 
 int input = 1;
@@ -21,19 +20,19 @@ atomic_uint test_counter = 0;
 
 static void* run(void *arg) {
     int tid;
-    zm_msqueue_t* queue;
+    zm_absqueue_t* queue;
     thread_data_t *data = (thread_data_t*) arg;
     tid   = data->tid;
     queue = data->queue;
 
     if(tid % 2 != 0) { /* producer(s) */
         for(int elem=0; elem < TEST_NELEMTS; elem++) {
-            zm_msqueue_enqueue(queue, (void*) &input);
+            zm_absqueue_enqueue(queue, (void*) &input);
         }
     } else {           /* consumer(s) */
         while(atomic_load_explicit(&test_counter, memory_order_acquire) < (TEST_NTHREADS/2)*TEST_NELEMTS) {
             int* elem = NULL;
-            zm_msqueue_dequeue(queue, (void**)&elem);
+            zm_absqueue_dequeue(queue, (void**)&elem);
             if ((elem != NULL) && (*elem == 1))
                     atomic_fetch_add_explicit(&test_counter, 1, memory_order_acq_rel);
         }
@@ -56,8 +55,8 @@ static void two_sided_funnel() {
     pthread_t threads[TEST_NTHREADS];
     thread_data_t data[TEST_NTHREADS];
 
-    zm_msqueue_t queue;
-    zm_msqueue_init(&queue);
+    zm_absqueue_t queue;
+    zm_absqueue_init(&queue);
 
     atomic_store(&test_counter, 0);
 
