@@ -18,7 +18,7 @@ struct thread_data {
 int input = 1;
 atomic_uint test_counter = 0;
 
-static void* run(void *arg) {
+static void* func(void *arg) {
     int tid;
     zm_absqueue_t* queue;
     thread_data_t *data = (thread_data_t*) arg;
@@ -42,15 +42,16 @@ static void* run(void *arg) {
 }
 
 /*-------------------------------------------------------------------------
- * Function: test_lock_throughput
+ * Function: run
  *
- * Purpose: Test the lock thruput for an empty critical section
+ * Purpose: Test the correctness of queue operations by counting the number
+ *  of dequeued elements to the expected number
  *
  * Return: Success: 0
  *         Failure: 1
  *-------------------------------------------------------------------------
  */
-static void two_sided_funnel() {
+static void run() {
     void *res;
     pthread_t threads[TEST_NTHREADS];
     thread_data_t data[TEST_NTHREADS];
@@ -63,7 +64,7 @@ static void two_sided_funnel() {
     for (int th=0; th < TEST_NTHREADS; th++) {
         data[th].tid = th;
         data[th].queue = &queue;
-        pthread_create(&threads[th], NULL, run, (void*) &data[th]);
+        pthread_create(&threads[th], NULL, func, (void*) &data[th]);
     }
     for (int th=0; th < TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
@@ -77,6 +78,6 @@ static void two_sided_funnel() {
 
 int main(int argc, char **argv)
 {
-  two_sided_funnel();
+  run();
 } /* end main() */
 

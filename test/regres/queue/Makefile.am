@@ -4,8 +4,8 @@
 #
 
 TESTS = \
-	two_sided_funnel_gl \
-	two_sided_funnel_ms
+	dequeue_count_mpmc_gl \
+	dequeue_count_mpmc_ms
 
 XFAIL_TESTS =
 
@@ -14,14 +14,14 @@ noinst_PROGRAMS = $(TESTS)
 
 include $(top_srcdir)/test/Makefile.mk
 
-two_sided_funnel_gl_SOURCES = two_sided_funnel.c
-two_sided_funnel_ms_SOURCES = two_sided_funnel.c
+dequeue_count_mpmc_gl_SOURCES = dequeue_count_mpmc.c
+dequeue_count_mpmc_ms_SOURCES = dequeue_count_mpmc.c
 
-two_sided_funnel_gl_CFLAGS = -DZMTEST_USE_GLQUEUE
-two_sided_funnel_ms_CFLAGS = -DZMTEST_USE_MSQUEUE
+dequeue_count_mpmc_gl_CFLAGS = -DZMTEST_USE_GLQUEUE
+dequeue_count_mpmc_ms_CFLAGS = -DZMTEST_USE_MSQUEUE
 
-two_sided_funnel_gl_LDFLAGS = -pthread
-two_sided_funnel_ms_LDFLAGS = -pthread
+dequeue_count_mpmc_gl_LDFLAGS = -pthread
+dequeue_count_mpmc_ms_LDFLAGS = -pthread
 
 testing:
-	./two_sided_funnel
+	./dequeue_count_mpmc
