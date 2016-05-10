@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "zmtest_absqueue.h"
-#define TEST_NTHREADS 4
+#define TEST_NTHREADS 36
 #define TEST_NELEMTS  1000
 
 typedef struct thread_data thread_data_t;
@@ -19,18 +19,32 @@ int input = 1;
 atomic_uint test_counter = 0;
 
 static void* func(void *arg) {
-    int tid;
+    int tid, nelem_enq, nelem_deq, producer_b;
     zm_absqueue_t* queue;
     thread_data_t *data = (thread_data_t*) arg;
     tid   = data->tid;
     queue = data->queue;
 
-    if(tid % 2 != 0) { /* producer(s) */
-        for(int elem=0; elem < TEST_NELEMTS; elem++) {
+#if   defined(ZMTEST_MPMC)
+    nelem_enq = TEST_NELEMTS;
+    nelem_deq = (TEST_NTHREADS/2)*TEST_NELEMTS;
+    producer_b = (tid % 2 == 0);
+#elif defined(ZMTEST_MPSC)
+    nelem_enq = TEST_NELEMTS;
+    nelem_deq = (TEST_NTHREADS-1)*TEST_NELEMTS;
+    producer_b = (tid != 0);
+#elif defined(ZMTEST_SPMC)
+    nelem_enq = (TEST_NTHREADS-1)*TEST_NELEMTS;
+    nelem_deq = (TEST_NTHREADS-1)*TEST_NELEMTS;
+    producer_b = (tid == 0);
+#endif
+
+    if(producer_b) { /* producer */
+        for(int elem=0; elem < nelem_enq; elem++) {
             zm_absqueue_enqueue(queue, (void*) &input);
         }
-    } else {           /* consumer(s) */
-        while(atomic_load_explicit(&test_counter, memory_order_acquire) < (TEST_NTHREADS/2)*TEST_NELEMTS) {
+    } else {           /* consumer */
+        while(atomic_load_explicit(&test_counter, memory_order_acquire) < nelem_deq) {
             int* elem = NULL;
             zm_absqueue_dequeue(queue, (void**)&elem);
             if ((elem != NULL) && (*elem == 1))
@@ -52,6 +66,7 @@ static void* func(void *arg) {
  *-------------------------------------------------------------------------
  */
 static void run() {
+    int nelem_deq;
     void *res;
     pthread_t threads[TEST_NTHREADS];
     thread_data_t data[TEST_NTHREADS];
@@ -69,8 +84,15 @@ static void run() {
     for (int th=0; th < TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
 
-    if(test_counter != (TEST_NTHREADS/2)*TEST_NELEMTS)
-        printf("Failed: got counter %d instead of %d\n", test_counter, (TEST_NTHREADS/2)*TEST_NELEMTS);
+#if   defined(ZMTEST_MPMC)
+    nelem_deq = (TEST_NTHREADS/2)*TEST_NELEMTS;
+#elif defined(ZMTEST_MPSC)
+    nelem_deq = (TEST_NTHREADS-1)*TEST_NELEMTS;
+#elif defined(ZMTEST_SPMC)
+    nelem_deq = (TEST_NTHREADS-1)*TEST_NELEMTS;
+#endif
+    if(test_counter != nelem_deq)
+        printf("Failed: got counter %d instead of %d\n", test_counter, nelem_deq);
     else
         printf("Pass\n");
 
