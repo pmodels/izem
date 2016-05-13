@@ -12,6 +12,7 @@ typedef struct zm_sdlnode zm_sdlnode_t;
 struct zm_sdlist {
     zm_sdlnode_t *head;
     zm_sdlnode_t *tail;
+    int length;
 };
 
 struct zm_sdlnode {
@@ -22,7 +23,7 @@ struct zm_sdlnode {
 
 void zm_sdlist_init(zm_sdlist_t *);
 
-/* to iterate through the list */
+/* accessors */
 static inline zm_sdlnode_t *zm_sdlist_begin(zm_sdlist_t list) {
     return list.head;
 }
@@ -35,6 +36,11 @@ static inline zm_sdlnode_t *zm_sdlist_next(zm_sdlnode_t node) {
     return node.next;
 }
 
+static inline int zm_sdlist_length(zm_sdlist_t list) {
+    return list.length;
+}
+
+/* updating routines */
 static inline void zm_sdlist_push_back(zm_sdlist_t *list, void *data) {
     zm_sdlnode_t *tail= list->tail;
     zm_sdlnode_t *node = malloc(sizeof *node);
@@ -50,6 +56,7 @@ static inline void zm_sdlist_push_back(zm_sdlist_t *list, void *data) {
         node->prev = tail;
         list->tail = node;
     }
+    list->length++;
 }
 
 static inline void *zm_sdlist_pop_front(zm_sdlist_t *list) {
@@ -64,6 +71,7 @@ static inline void *zm_sdlist_pop_front(zm_sdlist_t *list) {
         data = head->data;
         free(head);
     }
+    list->length--;
     return data;
 }
 
@@ -78,6 +86,7 @@ static inline void zm_sdlist_rmnode(zm_sdlist_t *list, zm_sdlnode_t *node){
     if (node->next != NULL)
         node->next->prev = node->prev;
     free(node);
+    list->length--;
 }
 
 /* remove a node that contains data */
