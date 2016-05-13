@@ -150,6 +150,7 @@ AC_CONFIG_FILES([Makefile
                  test/Makefile
                  test/regres/Makefile
                  test/regres/lock/Makefile
+                 test/regres/list/Makefile
                  test/regres/queue/Makefile
                  ])
 AC_OUTPUT

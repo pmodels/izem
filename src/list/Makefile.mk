@@ -3,5 +3,6 @@
 # See COPYRIGHT in top-level directory.
 #
 
-SUBDIRS = lock list queue
-DIST_SUBDIRS = $(SUBDIRS)
+zm_sources += \
+	list/zm_sdlist.c
+
