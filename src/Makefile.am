@@ -4,7 +4,7 @@
 #
 
 zm_sources =
-
+include $(top_srcdir)/src/mem/Makefile.mk
 include $(top_srcdir)/src/lock/Makefile.mk
 include $(top_srcdir)/src/list/Makefile.mk
 include $(top_srcdir)/src/queue/Makefile.mk
