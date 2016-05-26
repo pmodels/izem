@@ -98,6 +98,7 @@ static inline int zm_sdlist_remove(zm_sdlist_t *list, void *data) {
             zm_sdlist_rmnode(list, node);
             break;
         }
+        node = zm_sdlist_next(*node);
     }
     if(node != NULL)
         return 1;
