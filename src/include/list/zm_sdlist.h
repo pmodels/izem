@@ -105,4 +105,8 @@ static inline int zm_sdlist_remove(zm_sdlist_t *list, void *data) {
     else
         return 0;
 }
+
+static inline void zm_sdlist_free(zm_sdlist_t *list) {
+    while(zm_sdlist_pop_front(list) != NULL) ;
+}
 #endif /* _ZM_STLIST_H_ */
