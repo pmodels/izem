@@ -1,5 +1,5 @@
-#ifndef _ZM_UTIL_H
-#define _ZM_UTIL_H
+#ifndef _ZM_COMMON_H
+#define _ZM_COMMON_H
 
 #if defined(__x86_64__)
 #define ZM_CACHELINE_SIZE 64
@@ -20,4 +20,11 @@
 #include <opa_primitives.h>
 #endif
 
-#endif /* _ZM_UTIL_H */
+#if (__STDC_VERSION__ >= 201112L)
+#define zm_thread_local _Thread_local
+#endif
+
+#define zm_likely(x)      __builtin_expect(!!(x), 1)
+#define zm_unlikely(x)    __builtin_expect(!!(x), 0)
+
+#endif /* _ZM_COMMON_H */
