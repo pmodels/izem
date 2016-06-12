@@ -5,17 +5,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <lock/zm_ticket.h>
+#include <zmtest_abslock.h>
 
 #define TEST_NTHREADS 4
 #define TEST_NITER 100000
 
 static void* run(void *arg) {
-     zm_ticket_t *lock = (zm_ticket_t*) arg;
+     zm_abslock_t *lock = (zm_abslock_t*) arg;
+     zm_abslock_localctx_t my_ctx __attribute__ ((unused));
      for(int iter=0; iter<TEST_NITER; iter++) {
-         int err =  zm_ticket_acquire(lock);
+         int err =  zm_abslock_acquire(lock, &my_ctx);
          if(err==0)  /* Lock successfully acquired */
-            zm_ticket_release(lock);   /* Release the lock */
+            zm_abslock_release(lock, &my_ctx);   /* Release the lock */
          else {
             fprintf(stderr, "Error: couldn't acquire the lock\n");
             exit(1);
@@ -37,8 +38,8 @@ static void test_lock_thruput() {
     void *res;
     pthread_t threads[TEST_NTHREADS];
 
-    zm_ticket_t lock;
-    zm_ticket_init(&lock);
+    zm_abslock_t lock;
+    zm_abslock_init(&lock);
 
     for (int th=0; th<TEST_NTHREADS; th++)
         pthread_create(&threads[th], NULL, run, (void*) &lock);
