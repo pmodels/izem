@@ -4,5 +4,6 @@
 #
 
 zm_sources += \
-	lock/zm_ticket.c
+	lock/zm_ticket.c \
+	lock/zm_mcs.c
 
