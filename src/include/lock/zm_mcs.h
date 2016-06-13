@@ -9,7 +9,7 @@ static inline int zm_mcs_acquire(zm_mcs_t *L, zm_mcs_qnode_t* I) {
     zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)atomic_exchange_explicit(L, (zm_ptr_t)I, memory_order_acq_rel);
     if(pred != NULL) {
         atomic_store_explicit(&I->status, ZM_LOCKED, memory_order_release);
-        pred->next = I;
+        atomic_store_explicit(&pred->next, (zm_ptr_t)I, memory_order_release);
         while(atomic_load_explicit(&I->status, memory_order_acquire) != ZM_UNLOCKED)
             ; /* SPIN */
     }
@@ -19,8 +19,9 @@ static inline int zm_mcs_acquire(zm_mcs_t *L, zm_mcs_qnode_t* I) {
 /* Release the lock */
 static inline int zm_mcs_release(zm_mcs_t *L, zm_mcs_qnode_t *I) {
     if (atomic_load_explicit(&I->next, memory_order_acquire) == NULL) {
+        zm_mcs_qnode_t *tmp = I;
         if(atomic_compare_exchange_weak_explicit(L,
-                                                 (zm_ptr_t*)&I,
+                                                 (zm_ptr_t*)&tmp,
                                                  NULL,
                                                  memory_order_release,
                                                  memory_order_acquire))
