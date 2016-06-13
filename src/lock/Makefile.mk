@@ -6,5 +6,5 @@
 zm_sources += \
 	lock/zm_ticket.c \
 	lock/zm_mcs.c \
-	lock/zm_cvsmcs.c
+	lock/zm_csvmcs.c
 

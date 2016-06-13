@@ -21,15 +21,15 @@
 #define zm_abslock_init                                 zm_mcs_init
 #define zm_abslock_acquire(global_lock, local_context)  zm_mcs_acquire(global_lock, local_context)
 #define zm_abslock_release(global_lock, local_context)  zm_mcs_release(global_lock, local_context)
-#elif defined(ZMTEST_USE_CVSMCS)
-#include <lock/zm_cvsmcs.h>
+#elif defined(ZMTEST_USE_CSVMCS)
+#include <lock/zm_csvmcs.h>
 /* types */
-#define zm_abslock_t            zm_cvsmcs_t
+#define zm_abslock_t            zm_csvmcs_t
 #define zm_abslock_localctx_t   zm_mcs_qnode_t
 /* routines */
-#define zm_abslock_init                                 zm_cvsmcs_init
-#define zm_abslock_acquire(global_lock, local_context)  zm_cvsmcs_acquire(global_lock, local_context)
-#define zm_abslock_release(global_lock, local_context)  zm_cvsmcs_release(global_lock)
+#define zm_abslock_init                                 zm_csvmcs_init
+#define zm_abslock_acquire(global_lock, local_context)  zm_csvmcs_acquire(global_lock, local_context)
+#define zm_abslock_release(global_lock, local_context)  zm_csvmcs_release(global_lock)
 #else
 #error "No lock implementation specified"
 #endif

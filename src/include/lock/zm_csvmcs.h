@@ -1,10 +1,10 @@
-#ifndef _ZM_CVSMCS_H
-#define _ZM_CVSMCS_H
+#ifndef _ZM_CSVMCS_H
+#define _ZM_CSVMCS_H
 #include "lock/zm_lock_types.h"
 
-int zm_cvsmcs_init(zm_cvsmcs_t *);
+int zm_csvmcs_init(zm_csvmcs_t *);
 
-static inline int zm_cvsmcs_acquire(zm_cvsmcs_t *L, zm_mcs_qnode_t* I) {
+static inline int zm_csvmcs_acquire(zm_csvmcs_t *L, zm_mcs_qnode_t* I) {
     if(I == NULL)
         I = L->cur_ctx;
     atomic_store_explicit(&I->next, NULL, memory_order_release);
@@ -20,7 +20,7 @@ static inline int zm_cvsmcs_acquire(zm_cvsmcs_t *L, zm_mcs_qnode_t* I) {
 }
 
 /* Release the lock */
-static inline int zm_cvsmcs_release(zm_cvsmcs_t *L) {
+static inline int zm_csvmcs_release(zm_csvmcs_t *L) {
     zm_mcs_qnode_t* I = L->cur_ctx; /* get current local context */
     L->cur_ctx = NULL;
     if (atomic_load_explicit(&I->next, memory_order_acquire) == NULL) {
@@ -37,4 +37,4 @@ static inline int zm_cvsmcs_release(zm_cvsmcs_t *L) {
     atomic_store_explicit(&((zm_mcs_qnode_t*)atomic_load_explicit(&I->next, memory_order_acquire))->status, ZM_UNLOCKED, memory_order_release);
     return 0;
 }
-#endif /* _ZM_CVSMCS_H */
+#endif /* _ZM_CSVMCS_H */
