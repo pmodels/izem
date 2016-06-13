@@ -22,4 +22,12 @@ struct zm_mcs_qnode {
     zm_atomic_ptr_t next;
 };
 
+/* Context Saving MCS */
+typedef struct zm_cvsmcs zm_cvsmcs_t;
+
+struct zm_cvsmcs {
+    zm_atomic_ptr_t lock;
+    zm_mcs_qnode_t* cur_ctx __attribute__((aligned(64)));
+};
+
 #endif /* _IZEM_LOCK_TYPES_H */
