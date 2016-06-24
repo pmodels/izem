@@ -74,6 +74,13 @@ AC_CANONICAL_HOST
 dnl ----------------------------------------------------------------------------
 dnl user option/feature selection
 dnl ----------------------------------------------------------------------------
+# embedding option
+AC_ARG_ENABLE(embedded,
+    AC_HELP_STRING([--enable-embedded], [Build Izem in embedded mode (default is no)]),
+    [embedded=yes],
+    [embedded=no])
+AM_CONDITIONAL([ZM_EMBEDDED_MODE],[test "x${embedded}" = "xyes"])
+
 # debug options
 AC_ARG_ENABLE([debug],
 [  --enable-debug@<:@=OPTS@:>@   control the level of debugging. "OPTS" is a list of
