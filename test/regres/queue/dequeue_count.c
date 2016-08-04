@@ -15,10 +15,14 @@ struct thread_data {
     zm_absqueue_t* queue;
 };
 
-int input = 1;
 atomic_uint test_counter = 0;
 
 static void* func(void *arg) {
+#if defined(ZMTEST_ALLOC_QELEM)
+    int *input;
+#else
+    int input = 1;
+#endif
     int tid, nelem_enq, nelem_deq, producer_b;
     zm_absqueue_t* queue;
     thread_data_t *data = (thread_data_t*) arg;
@@ -41,14 +45,24 @@ static void* func(void *arg) {
 
     if(producer_b) { /* producer */
         for(int elem=0; elem < nelem_enq; elem++) {
+#if defined(ZMTEST_ALLOC_QELEM)
+            input = malloc(sizeof *input);
+            *input = 1;
+            zm_absqueue_enqueue(queue, (void*) input);
+#else
             zm_absqueue_enqueue(queue, (void*) &input);
+#endif
         }
     } else {           /* consumer */
         while(atomic_load_explicit(&test_counter, memory_order_acquire) < nelem_deq) {
             int* elem = NULL;
             zm_absqueue_dequeue(queue, (void**)&elem);
-            if ((elem != NULL) && (*elem == 1))
+            if ((elem != NULL) && (*elem == 1)) {
                     atomic_fetch_add_explicit(&test_counter, 1, memory_order_acq_rel);
+#if defined(ZMTEST_ALLOC_QELEM)
+            free(elem);
+#endif
+            }
         }
 
     }
