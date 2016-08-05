@@ -48,6 +48,7 @@ static inline int zm_msqueue_dequeue(zm_msqueue_t* q, void **data) {
     zm_ptr_t tail;
     zm_ptr_t next;
     zm_hzdptr_t *hzdptrs = zm_hzdptr_get();
+    *data = NULL;
     while (1) {
         head = atomic_load_explicit(&q->head, memory_order_acquire);
         hzdptrs[0] = head;
