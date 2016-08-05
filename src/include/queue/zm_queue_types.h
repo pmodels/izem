@@ -18,6 +18,10 @@ struct zm_glqueue {
     zm_ptr_t tail ZM_ALLIGN_TO_CACHELINE;
 };
 
+/* nmqueue */
+typedef struct zm_msqueue zm_nmqueue_t;
+typedef struct zm_msqnode zm_nmqnode_t;
+
 /* msqueue */
 typedef struct zm_msqueue zm_msqueue_t;
 typedef struct zm_msqnode zm_msqnode_t;
