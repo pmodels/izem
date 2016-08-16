@@ -1,3 +1,8 @@
+/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
+/*
+ * See COPYRIGHT in top-level directory.
+ */
+
 #ifndef _ZM_MSQUEUE_H
 #define _ZM_MSQUEUE_H
 #include <stdlib.h>

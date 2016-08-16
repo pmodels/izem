@@ -1,3 +1,8 @@
+/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
+/*
+ * See COPYRIGHT in top-level directory.
+ */
+
 #ifndef _ZM_TICKET_H
 #define _ZM_TICKET_H
 #include "lock/zm_lock_types.h"

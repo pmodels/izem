@@ -1,3 +1,8 @@
+/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
+/*
+ * See COPYRIGHT in top-level directory.
+ */
+
 #ifndef _ZM_GLQUEUE_H
 #define _ZM_GLQUEUE_H
 #include <stdlib.h>

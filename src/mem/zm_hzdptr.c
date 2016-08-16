@@ -1,3 +1,8 @@
+/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
+/*
+ * See COPYRIGHT in top-level directory.
+ */
+
 #include "mem/zm_hzdptr.h"
 
 zm_atomic_ptr_t zm_hzdptr_list; /* head of the list*/

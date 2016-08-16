@@ -1,3 +1,8 @@
+/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
+/*
+ * See COPYRIGHT in top-level directory.
+ */
+
 #include <stdlib.h>
 #include "lock/zm_mcs.h"
 

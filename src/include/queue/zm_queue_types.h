@@ -1,3 +1,8 @@
+/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
+/*
+ * See COPYRIGHT in top-level directory.
+ */
+
 #ifndef _ZM_QUEUE_TYPES_H
 #define _ZM_QUEUE_TYPES_H
 #include "common/zm_common.h"

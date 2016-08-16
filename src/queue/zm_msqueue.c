@@ -1,3 +1,8 @@
+/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
+/*
+ * See COPYRIGHT in top-level directory.
+ */
+
 #include "queue/zm_msqueue.h"
 
 int zm_msqueue_init(zm_msqueue_t *q) {

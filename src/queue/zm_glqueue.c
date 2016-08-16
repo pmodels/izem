@@ -1,3 +1,8 @@
+/* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
+/*
+ * See COPYRIGHT in top-level directory.
+ */
+
 #include "queue/zm_glqueue.h"
 
 int zm_glqueue_init(zm_glqueue_t *q) {
