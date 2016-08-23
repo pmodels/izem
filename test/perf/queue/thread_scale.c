@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <omp.h>
 #include "zmtest_absqueue.h"
-#define TEST_NELEMTS  100000
+#define TEST_NELEMTS  10000000
 
 /*-------------------------------------------------------------------------
  * Function: run
@@ -25,15 +25,27 @@ static inline void run() {
 
     printf("#threads \t throughput ops/s\n");
 
-    for ( int nthreads = 1; nthreads <= omp_get_max_threads(); nthreads += 2) {
+    for ( int nthreads = 2; nthreads <= omp_get_max_threads(); nthreads ++) {
         zm_absqueue_init(&queue);
+        int nelem_enq, nelem_deq;
+
+        #if   defined(ZMTEST_MPMC)
+            nelem_enq = TEST_NELEMTS/(nthreads/2);
+            nelem_deq = (nthreads/2)*nelem_enq;
+        #elif defined(ZMTEST_MPSC)
+            nelem_enq = TEST_NELEMTS/(nthreads-1);
+            nelem_deq = (nthreads-1)*nelem_enq;
+        #elif defined(ZMTEST_SPMC)
+            nelem_enq = TEST_NELEMTS;
+            nelem_deq = nelem_enq;
+        #endif
 
         t1 = omp_get_wtime();
 
         #pragma omp parallel num_threads(nthreads)
         {
 
-            int tid, nelem_enq, nelem_deq, producer_b;
+            int tid, producer_b;
         #if defined(ZMTEST_ALLOC_QELEM)
             int *input;
         #else
@@ -41,16 +53,10 @@ static inline void run() {
         #endif
         tid = omp_get_thread_num();
         #if   defined(ZMTEST_MPMC)
-            nelem_enq = TEST_NELEMTS;
-            nelem_deq = (nthreads/2)*TEST_NELEMTS;
             producer_b = (tid % 2 == 0);
         #elif defined(ZMTEST_MPSC)
-            nelem_enq = TEST_NELEMTS;
-            nelem_deq = (nthreads-1)*TEST_NELEMTS;
             producer_b = (tid != 0);
         #elif defined(ZMTEST_SPMC)
-            nelem_enq = (nthreads-1)*TEST_NELEMTS;
-            nelem_deq = (nthreads-1)*TEST_NELEMTS;
             producer_b = (tid == 0);
         #endif
 
@@ -80,7 +86,7 @@ static inline void run() {
         }
 
         t2 = omp_get_wtime();
-        printf("%d \t %lf\n", nthreads, (double)TEST_NELEMTS/(t2-t1));
+        printf("%d \t %lf\n", nthreads, (double)nelem_deq/(t2-t1));
     }
 
 } /* end run() */
