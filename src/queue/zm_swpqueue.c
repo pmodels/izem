@@ -3,10 +3,10 @@
  * See COPYRIGHT in top-level directory.
  */
 
-#include "queue/zm_nmqueue.h"
+#include "queue/zm_swpqueue.h"
 
-int zm_nmqueue_init(zm_nmqueue_t *q) {
-    zm_nmqnode_t* node = (zm_nmqnode_t*) malloc(sizeof(zm_nmqnode_t));
+int zm_swpqueue_init(zm_swpqueue_t *q) {
+    zm_swpqnode_t* node = (zm_swpqnode_t*) malloc(sizeof(zm_swpqnode_t));
     node->data = NULL;
     node->next = NULL;
     atomic_store(&q->head, (zm_ptr_t)node);

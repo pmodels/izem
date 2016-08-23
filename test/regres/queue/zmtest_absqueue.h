@@ -12,15 +12,15 @@
 #define zm_absqueue_init    zm_glqueue_init
 #define zm_absqueue_enqueue zm_glqueue_enqueue
 #define zm_absqueue_dequeue zm_glqueue_dequeue
-#elif defined(ZMTEST_USE_NMQUEUE)
-#include <queue/zm_nmqueue.h>
+#elif defined(ZMTEST_USE_SWPQUEUE)
+#include <queue/zm_swpqueue.h>
 /* types */
-#define zm_absqueue_t       zm_nmqueue_t
-#define zm_absqnode_t       zm_nmqnode_t
+#define zm_absqueue_t       zm_swpqueue_t
+#define zm_absqnode_t       zm_swpqnode_t
 /* routines */
-#define zm_absqueue_init    zm_nmqueue_init
-#define zm_absqueue_enqueue zm_nmqueue_enqueue
-#define zm_absqueue_dequeue zm_nmqueue_dequeue
+#define zm_absqueue_init    zm_swpqueue_init
+#define zm_absqueue_enqueue zm_swpqueue_enqueue
+#define zm_absqueue_dequeue zm_swpqueue_dequeue
 #elif defined(ZMTEST_USE_MSQUEUE)
 #include <queue/zm_msqueue.h>
 /* types */
