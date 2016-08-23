@@ -3,5 +3,5 @@
 # See COPYRIGHT in top-level directory.
 #
 
-SUBDIRS = regres perf
+SUBDIRS = queue
 DIST_SUBDIRS = $(SUBDIRS)
