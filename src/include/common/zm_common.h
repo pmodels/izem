@@ -17,9 +17,12 @@
 #define zm_ptr_t void*
 
 #if !defined(__STDC_NO_ATOMICS__)
+#if defined(_OPENMP)
+#define _Atomic volatile
+#endif
 #include <stdatomic.h>
 
-#define zm_atomic_ptr_t _Atomic(zm_ptr_t)
+#define zm_atomic_ptr_t _Atomic zm_ptr_t
 
 #else
 #include <opa_primitives.h>

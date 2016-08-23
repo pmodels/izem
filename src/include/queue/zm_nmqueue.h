@@ -26,12 +26,12 @@ static inline int zm_nmqueue_dequeue(zm_nmqueue_t* q, void **data) {
     zm_nmqnode_t* head;
     zm_ptr_t next;
     *data = NULL;
-    head = atomic_load_explicit(&q->head, memory_order_acquire);
+    head = (zm_nmqnode_t*) atomic_load_explicit(&q->head, memory_order_acquire);
     /* At least one element in the queue: 
             ==> head != tail 
             ==> no consistency issues between enqueuers and dequeuers */
     if (head->next != NULL) {
-        next = atomic_load_explicit(&head->next, memory_order_acquire);
+        next = (zm_ptr_t) atomic_load_explicit(&head->next, memory_order_acquire);
         atomic_store_explicit(&q->head, next, memory_order_release);
         *data = ((zm_nmqnode_t*)next)->data;
         free(head);
