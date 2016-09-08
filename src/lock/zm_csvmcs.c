@@ -8,17 +8,17 @@
 
 int zm_csvmcs_init(zm_csvmcs_t *L)
 {
-    atomic_store(&L->lock, (zm_ptr_t)NULL);
-    L->cur_ctx = NULL;
+    atomic_store(&L->lock, ZM_NULL);
+    L->cur_ctx = (zm_mcs_qnode_t*)ZM_NULL;
     return 0;
 }
 
 int zm_csvmcs_acquire(zm_csvmcs_t *L, zm_mcs_qnode_t* I) {
-    if(I == NULL)
+    if((zm_ptr_t)I == ZM_NULL)
         I = L->cur_ctx;
-    atomic_store_explicit(&I->next, NULL, memory_order_release);
+    atomic_store_explicit(&I->next, ZM_NULL, memory_order_release);
     zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)atomic_exchange_explicit(&L->lock, (zm_ptr_t)I, memory_order_acq_rel);
-    if(pred != NULL) {
+    if((zm_ptr_t)pred != ZM_NULL) {
         atomic_store_explicit(&I->status, ZM_LOCKED, memory_order_release);
         atomic_store_explicit(&pred->next, (zm_ptr_t)I, memory_order_release);
         while(atomic_load_explicit(&I->status, memory_order_acquire) != ZM_UNLOCKED)
@@ -31,16 +31,16 @@ int zm_csvmcs_acquire(zm_csvmcs_t *L, zm_mcs_qnode_t* I) {
 /* Release the lock */
 int zm_csvmcs_release(zm_csvmcs_t *L) {
     zm_mcs_qnode_t* I = L->cur_ctx; /* get current local context */
-    L->cur_ctx = NULL;
-    if (atomic_load_explicit(&I->next, memory_order_acquire) == NULL) {
+    L->cur_ctx = (zm_mcs_qnode_t*)ZM_NULL;
+    if (atomic_load_explicit(&I->next, memory_order_acquire) == ZM_NULL) {
         zm_mcs_qnode_t *tmp = I;
         if(atomic_compare_exchange_weak_explicit(&L->lock,
                                                  (zm_ptr_t*)&tmp,
-                                                 NULL,
+                                                 ZM_NULL,
                                                  memory_order_release,
                                                  memory_order_acquire))
             return 0;
-        while(atomic_load_explicit(&I->next, memory_order_acquire) == NULL)
+        while(atomic_load_explicit(&I->next, memory_order_acquire) == ZM_NULL)
             ; /* SPIN */
     }
     atomic_store_explicit(&((zm_mcs_qnode_t*)atomic_load_explicit(&I->next, memory_order_acquire))->status, ZM_UNLOCKED, memory_order_release);

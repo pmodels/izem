@@ -14,17 +14,21 @@
 
 #define ZM_ALLIGN_TO_CACHELINE __attribute__((aligned(ZM_CACHELINE_SIZE)))
 
-#define zm_ptr_t void*
+#define zm_ptr_t intptr_t
 #define zm_ulong_t unsigned long
 
-#if !defined(__STDC_NO_ATOMICS__)
-#if defined(_OPENMP)
-#define _Atomic volatile
-#endif
-#include <stdatomic.h>
+#define ZM_NULL (zm_ptr_t)NULL
 
-#define zm_atomic_ptr_t _Atomic zm_ptr_t
-#define zm_atomic_ulong_t _Atomic unsigned long
+#if !defined(__STDC_NO_ATOMICS__)
+
+#if defined(_OPENMP)
+#define zm_atomic_ptr_t   volatile zm_ptr_t
+#define zm_atomic_ulong_t volatile unsigned long
+#else
+#include <stdatomic.h>
+#define zm_atomic_ptr_t   atomic_intptr_t
+#define zm_atomic_ulong_t atomic_ulong
+#endif
 
 #else
 #include <opa_primitives.h>

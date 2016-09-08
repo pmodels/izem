@@ -34,9 +34,9 @@ extern atomic_uint zm_hplist_length; /* N: correlates with the number
 extern zm_thread_local zm_hzdptr_lnode_t* zm_my_hplnode;
 
 static inline void zm_hzdptr_allocate() {
-    zm_hzdptr_lnode_t *cur_hplnode = (zm_hzdptr_lnode_t*) zm_hzdptr_list;
+    zm_hzdptr_lnode_t *cur_hplnode = (zm_hzdptr_lnode_t*) atomic_load_explicit(&zm_hzdptr_list, memory_order_acquire);
     zm_ptr_t old_hplhead;
-    while (cur_hplnode != NULL) {
+    while ((zm_ptr_t)cur_hplnode != ZM_NULL) {
         if(atomic_flag_test_and_set_explicit(&cur_hplnode->active, memory_order_acq_rel)) {
             cur_hplnode = (zm_hzdptr_lnode_t*)atomic_load_explicit(&cur_hplnode->next, memory_order_acquire);
             continue;
@@ -48,7 +48,7 @@ static inline void zm_hzdptr_allocate() {
     /* Allocate and initialize a new node */
     cur_hplnode = malloc (sizeof *cur_hplnode);
     atomic_flag_test_and_set_explicit(&cur_hplnode->active, memory_order_acq_rel);
-    atomic_store_explicit(&cur_hplnode->next, NULL, memory_order_release);
+    atomic_store_explicit(&cur_hplnode->next, ZM_NULL, memory_order_release);
     do {
         old_hplhead = (zm_ptr_t) atomic_load_explicit(&zm_hzdptr_list, memory_order_acquire);
         atomic_store_explicit(&cur_hplnode->next, old_hplhead, memory_order_release);
@@ -59,7 +59,7 @@ static inline void zm_hzdptr_allocate() {
                                                    memory_order_acquire));
     zm_my_hplnode = cur_hplnode;
     for(int i=0; i<ZM_HZDPTR_NUM; i++)
-        zm_my_hplnode->hzdptrs[i] = NULL;
+        zm_my_hplnode->hzdptrs[i] = ZM_NULL;
     zm_sdlist_init(&zm_my_hplnode->rlist);
 }
 
@@ -67,11 +67,11 @@ static inline void zm_hzdptr_scan() {
     zm_sdlist_t plist;
     /* stage 1: pull non-null values from hzdptr_list */
     zm_sdlist_init(&plist);
-    zm_hzdptr_lnode_t *cur_hplnode = (zm_hzdptr_lnode_t*) zm_hzdptr_list;
-    while(cur_hplnode != NULL) {
+    zm_hzdptr_lnode_t *cur_hplnode = (zm_hzdptr_lnode_t*) atomic_load_explicit(&zm_hzdptr_list, memory_order_acquire);;
+    while((zm_ptr_t)cur_hplnode != ZM_NULL) {
         for(int i=0; i<ZM_HZDPTR_NUM; i++) {
-            if(cur_hplnode->hzdptrs[i] != NULL)
-                zm_sdlist_push_back(&plist, cur_hplnode->hzdptrs[i]);
+            if(cur_hplnode->hzdptrs[i] != ZM_NULL)
+                zm_sdlist_push_back(&plist, (void*)cur_hplnode->hzdptrs[i]);
         }
         cur_hplnode = (zm_hzdptr_lnode_t*)atomic_load_explicit(&cur_hplnode->next, memory_order_acquire);
     }
@@ -79,9 +79,9 @@ static inline void zm_hzdptr_scan() {
     zm_sdlnode_t *node = zm_sdlist_begin(zm_my_hplnode->rlist);
     while (node != NULL) {
         zm_sdlnode_t *next = zm_sdlist_next(*node);
-        if(!zm_sdlist_remove(&plist, ((zm_sdlnode_t*)node)->data))
+        if(!zm_sdlist_remove(&plist, node->data))
             /* TODO: reuse instead of freeing */
-            zm_sdlist_rmnode(&zm_my_hplnode->rlist, (zm_sdlnode_t*)node);
+            zm_sdlist_rmnode(&zm_my_hplnode->rlist, node);
         node = next;
     }
     zm_sdlist_free(&plist);
@@ -89,13 +89,13 @@ static inline void zm_hzdptr_scan() {
 
 static inline void zm_hzdptr_helpscan() {
     zm_hzdptr_lnode_t *cur_hplnode = (zm_hzdptr_lnode_t*) zm_hzdptr_list;
-    while(cur_hplnode != NULL) {
+    while((zm_ptr_t)cur_hplnode != ZM_NULL) {
         if(atomic_flag_test_and_set_explicit(&cur_hplnode->active, memory_order_acq_rel)) {
             cur_hplnode = (zm_hzdptr_lnode_t*)atomic_load_explicit(&cur_hplnode->next, memory_order_acquire);
             continue;
         }
         while(zm_sdlist_length(cur_hplnode->rlist) > 0) {
-            zm_ptr_t node = zm_sdlist_pop_front(&cur_hplnode->rlist);
+            zm_sdlnode_t *node = zm_sdlist_pop_front(&cur_hplnode->rlist);
             zm_sdlist_push_back(&zm_my_hplnode->rlist, node);
             if(zm_sdlist_length(zm_my_hplnode->rlist) >=
                2 * atomic_load_explicit(&zm_hplist_length, memory_order_acquire))
@@ -106,8 +106,8 @@ static inline void zm_hzdptr_helpscan() {
     }
 }
 
-static inline void zm_hzdptr_retire(zm_atomic_ptr_t node) {
-    zm_sdlist_push_back(&zm_my_hplnode->rlist, (zm_ptr_t) node);
+static inline void zm_hzdptr_retire(zm_ptr_t node) {
+    zm_sdlist_push_back(&zm_my_hplnode->rlist, (void*)node);
     if(zm_sdlist_length(zm_my_hplnode->rlist) >=
        2 * atomic_load_explicit(&zm_hplist_length, memory_order_acquire)) {
         zm_hzdptr_scan();
