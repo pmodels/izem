@@ -19,6 +19,7 @@
 
 #define ZM_NULL (zm_ptr_t)NULL
 
+/* FIXME Test for C11 atomic types and functions in configure. */
 #if !defined(__STDC_NO_ATOMICS__)
 
 #if defined(_OPENMP)
@@ -34,8 +35,12 @@
 #include <opa_primitives.h>
 #endif
 
+/* FIXME It would be better to test for the presence of a TLS keyword in configure. */
 #if (__STDC_VERSION__ >= 201112L)
 #define zm_thread_local _Thread_local
+#elif defined(__GNUC__) && (__GNUC__ > 3)
+/* __thread was introduced in GCC 3.3.1 (https://gcc.gnu.org/onlinedocs/gcc-3.3.1/gcc/C99-Thread-Local-Edits.html) */
+#define zm_thread_local __thread
 #endif
 
 #define zm_likely(x)      __builtin_expect(!!(x), 1)
