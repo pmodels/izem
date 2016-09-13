@@ -1,5 +1,5 @@
-[![Build
-Status](https://travis-ci.org/halimamer/izem.svg?branch=master)](https://travis-ci.org/halimamer/izem)
+[![Build Status](https://travis-ci.org/halimamer/izem.svg?branch=master)](https://travis-ci.org/halimamer/izem)
+
 			Izem Release %VERSION%
 
 Izem is a shared-memory synchronization library that offers several
