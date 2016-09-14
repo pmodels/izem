@@ -3,7 +3,7 @@
 # See COPYRIGHT in top-level directory.
 #
 
-#AC_PREREQ(2.63)
+AC_PREREQ(2.63)
 
 m4_include([maint/version.m4])
 AC_INIT([izem],ZM_VERSION_m4)
@@ -122,7 +122,7 @@ AS_IF([test "x$debug_log" = "xyes"],
     [AC_DEFINE(ZM_CONFIG_USE_DEBUG_LOG, 1, [Define to enable debug logging])])
 
 
-AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.12.3 subdir-objects])
+AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.11.3 subdir-objects])
 
 AM_SILENT_RULES([yes])
 AM_PROG_AS

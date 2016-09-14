@@ -13,8 +13,6 @@ addons:
     packages:
     - gcc-6
     - clang-3.8
-    - autoconf-2.64
-    - automake-1.12.3
 script:
     - ./autogen.sh
     - mkdir build
