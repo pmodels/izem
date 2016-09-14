@@ -26,8 +26,3 @@ cs_thruput_csvmcs_CFLAGS = -DZMTEST_USE_CSVMCS
 cs_thruput_tkt_LDFLAGS = -pthread
 cs_thruput_mcs_LDFLAGS = -pthread
 cs_thruput_csvmcs_LDFLAGS = -pthread
-
-testing:
-	./cs_thruput_tkt \
-	./cs_thruput_mcs \
-	./cs_thruput_csvmcs

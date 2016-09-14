@@ -18,6 +18,3 @@ array_to_list_SOURCES = array_to_list.c
 array_to_list_CFLAGS =
 
 array_to_list_LDFLAGS = -pthread
-
-testing:
-	./array_to_list
