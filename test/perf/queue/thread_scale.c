@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <omp.h>
 #include "zmtest_absqueue.h"
-#define TEST_NELEMTS  10000
+#define TEST_NELEMTS  1000
 
 /*-------------------------------------------------------------------------
  * Function: run

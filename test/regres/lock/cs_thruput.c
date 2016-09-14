@@ -8,7 +8,7 @@
 #include <zmtest_abslock.h>
 
 #define TEST_NTHREADS 4
-#define TEST_NITER 100000
+#define TEST_NITER 1000
 
 static void* run(void *arg) {
      zm_abslock_t *lock = (zm_abslock_t*) arg;
