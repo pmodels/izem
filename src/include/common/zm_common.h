@@ -13,7 +13,7 @@
 #endif
 
 #define ZM_ALLIGN_TO_CACHELINE __attribute__((aligned(ZM_CACHELINE_SIZE)))
-
+#include <stdint.h>
 #define zm_ptr_t intptr_t
 #define zm_ulong_t unsigned long
 
