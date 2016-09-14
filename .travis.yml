@@ -1,0 +1,14 @@
+language: c
+compiler:
+    - clang
+    - gcc
+os:
+    - linux
+    - osx
+script:
+    - ./autogen.sh
+    - mkdir build
+    - cd build
+    - ../configure CFLAGS="-std=c11 -Wall" && make
+    - cd test
+    - make check
