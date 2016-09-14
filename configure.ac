@@ -3,7 +3,7 @@
 # See COPYRIGHT in top-level directory.
 #
 
-AC_PREREQ(2.63)
+#AC_PREREQ(2.63)
 
 m4_include([maint/version.m4])
 AC_INIT([izem],ZM_VERSION_m4)
