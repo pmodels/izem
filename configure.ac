@@ -63,6 +63,7 @@ AC_SUBST(ZM_NUMVERSION)
 AC_CONFIG_AUX_DIR(m4)
 AC_CONFIG_MACRO_DIR(m4)
 AC_PROG_CC
+AC_PROG_CXX
 AC_HEADER_STDC
 
 dnl ----------------------------------------------------------------------------
