@@ -61,5 +61,6 @@ struct zm_tlp {
    zm_mcs_t low_p __attribute__((aligned(64)));
 #endif
 };
+typedef zm_ptr_t zm_hmcs_t;
 
 #endif /* _IZEM_LOCK_TYPES_H */
