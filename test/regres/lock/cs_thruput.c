@@ -7,8 +7,11 @@
 #include <pthread.h>
 #include <zmtest_abslock.h>
 
-#define TEST_NTHREADS 4
-#define TEST_NITER 1000
+#define TEST_NTHREADS 72
+#define TEST_NITER 1000000
+
+char cache_lines[640] = {0};
+int indices [] = {3,6,1,7,0,2,9,4,8,5};
 
 static void* run(void *arg) {
      int iter
@@ -16,9 +19,11 @@ static void* run(void *arg) {
      zm_abslock_localctx_t my_ctx __attribute__ ((unused));
      for(iter=0; iter<TEST_NITER; iter++) {
          int err =  zm_abslock_acquire(lock, &my_ctx);
-         if(err==0)  /* Lock successfully acquired */
-            zm_abslock_release(lock, &my_ctx);   /* Release the lock */
-         else {
+         if(err==0) {  /* Lock successfully acquired */
+            for(int i = 0; i < 10; i++)
+                 cache_lines[indices[i]] += cache_lines[indices[9-i]];
+             zm_abslock_release(lock, &my_ctx);   /* Release the lock */
+         } else {
             fprintf(stderr, "Error: couldn't acquire the lock\n");
             exit(1);
          }
