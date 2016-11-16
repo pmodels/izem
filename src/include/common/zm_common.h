@@ -23,10 +23,12 @@
 #if !defined(__STDC_NO_ATOMICS__)
 
 #if defined(_OPENMP)
+#define zm_atomic_uint_t  volatile unsigned int
 #define zm_atomic_ptr_t   volatile zm_ptr_t
 #define zm_atomic_ulong_t volatile unsigned long
 #else
 #include <stdatomic.h>
+#define zm_atomic_uint_t  atomic_uint
 #define zm_atomic_ptr_t   atomic_intptr_t
 #define zm_atomic_ulong_t atomic_ulong
 #endif
