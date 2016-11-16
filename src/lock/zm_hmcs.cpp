@@ -616,8 +616,8 @@ struct IzemHMCSLock{
 void IzemHMCSLockInit(zm_hmcs_t *handle){
     // Get config;
     int maxThreads = 72;
-    int  levels = 1;
-    int  participantsAtLevel[] = {72};
+    int  levels = 3;
+    int  participantsAtLevel[] = {2,18,72};
     *handle  = (zm_hmcs_t) new IzemHMCSLock(maxThreads, levels, participantsAtLevel);
 }
 
@@ -627,12 +627,13 @@ extern "C" {
         IzemHMCSLockInit(handle);
         return 0;
     }
-    int zm_hmcs_acquire(zm_hmcs_t *L){
-        ((struct IzemHMCSLock*)*L)->Acquire();
+
+    int zm_hmcs_acquire(zm_hmcs_t L){
+        ((struct IzemHMCSLock*)L)->Acquire();
         return 0;
     }
-    int zm_hmcs_release(zm_hmcs_t *L){
-        ((struct IzemHMCSLock*)*L)->Release();
+    int zm_hmcs_release(zm_hmcs_t L){
+        ((struct IzemHMCSLock*)L)->Release();
         return 0;
     }
 
