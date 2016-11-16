@@ -39,6 +39,15 @@
 #define zm_abslock_init                                 zm_tlp_init
 #define zm_abslock_acquire(global_lock, local_context)  zm_tlp_acquire(global_lock)
 #define zm_abslock_release(global_lock, local_context)  zm_tlp_release(global_lock)
+#elif defined(ZMTEST_USE_HMCS)
+#include <lock/zm_hmcs.h>
+/* types */
+#define zm_abslock_t            zm_hmcs_t
+#define zm_abslock_localctx_t   int /*dummy*/
+/* routines */
+#define zm_abslock_init                                 zm_hmcs_init
+#define zm_abslock_acquire(global_lock, local_context)  zm_hmcs_acquire(global_lock)
+#define zm_abslock_release(global_lock, local_context)  zm_hmcs_release(global_lock)
 #else
 #error "No lock implementation specified"
 #endif

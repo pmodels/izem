@@ -12,6 +12,7 @@ zm_headers = \
 	include/lock/zm_mcs.h \
 	include/lock/zm_csvmcs.h \
 	include/lock/zm_tlp.h \
+	include/lock/zm_hmcs.h \
 	include/queue/zm_queue_types.h \
 	include/queue/zm_glqueue.h \
 	include/queue/zm_swpqueue.h \
