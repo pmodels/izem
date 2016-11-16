@@ -46,8 +46,8 @@
 #define zm_abslock_localctx_t   int /*dummy*/
 /* routines */
 #define zm_abslock_init                                 zm_hmcs_init
-#define zm_abslock_acquire(global_lock, local_context)  zm_hmcs_acquire(global_lock)
-#define zm_abslock_release(global_lock, local_context)  zm_hmcs_release(global_lock)
+#define zm_abslock_acquire(global_lock, local_context)  zm_hmcs_acquire(*(global_lock))
+#define zm_abslock_release(global_lock, local_context)  zm_hmcs_release(*(global_lock))
 #else
 #error "No lock implementation specified"
 #endif
