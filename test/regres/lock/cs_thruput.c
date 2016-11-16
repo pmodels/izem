@@ -41,8 +41,15 @@ static void test_lock_thruput() {
     zm_abslock_t lock;
     zm_abslock_init(&lock);
 
-    for (int th=0; th<TEST_NTHREADS; th++)
-        pthread_create(&threads[th], NULL, run, (void*) &lock);
+    for (int th=0; th<TEST_NTHREADS; th++) {
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(th, &cpuset);
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
+        pthread_create(&threads[th], &attr, run, (void*) &lock);
+    }
     for (int th=0; th<TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
 
