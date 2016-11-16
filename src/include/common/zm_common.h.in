@@ -29,7 +29,7 @@
 #define ZM_MEMORY_MODEL @ZM_MEMORY_MODEL@
 
 #if ZM_MEMORY_MODEL == ZM_MEMORY_MODEL_C11
-#if defined(_OPENMP)
+#if defined(_OPENMP) || defined(__cplusplus)
 #define zm_atomic_uint_t  volatile unsigned int
 #define zm_atomic_ptr_t   volatile zm_ptr_t
 #define zm_atomic_ulong_t volatile unsigned long
