@@ -44,7 +44,7 @@
 #endif
 #include "lock/zm_lock_types.h"
 
-#define DEFAULT_THRESHOLD 8192
+#define DEFAULT_THRESHOLD 256
 
 #define  LOCKED (false)
 #define  UNLOCKED (true)
@@ -598,16 +598,14 @@ struct IzemHMCSLock{
     }
     
     inline __attribute__((always_inline)) __attribute__((flatten)) void Acquire(){
-        if (zm_unlikely(tid == -1))
+        if (zm_unlikely(tid == -1)) {
             tid = sched_getcpu();
+            tid = GetRealTid(tid);
+        }
         leafNodes[tid]->Acquire();
     }
     
     inline __attribute__((always_inline)) __attribute__((flatten)) void Release(){
-        if (zm_unlikely(tid == -1)) {
-            tid = sched_getcpu();
-            tid = GetRealTid(tid); 
-        }
         leafNodes[tid]->Release();
     }
 };
