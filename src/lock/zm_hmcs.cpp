@@ -124,7 +124,6 @@ assert( 0 && "unsupported platform");
 #define CACHE_LINE_SIZE (128)
 #endif
 
-//#define DOWORK
 //#define VALIDATE
 #define CHECK_THREAD_AFFINITY
 
@@ -132,91 +131,11 @@ assert( 0 && "unsupported platform");
 volatile int var = 0;
 #endif
 
-#ifdef DOWORK
-/*
-struct InsideCS{
-    volatile uint64_t f1 __attribute__((aligned(CACHE_LINE_SIZE)));
-    volatile uint64_t f2 __attribute__((aligned(CACHE_LINE_SIZE)));
-}__attribute__((aligned(CACHE_LINE_SIZE)));
-
-
-InsideCS gInsideCS;
-
-// Touch 2 shared variables when inside a critical section
-void DoWorkInsideCS(){
-    gInsideCS.f1++;
-    gInsideCS.f2++;
-}
-*/
-
-struct CriticalData_t{
-    uint64_t data __attribute__((aligned(CACHE_LINE_SIZE)));
-    inline void* operator new(size_t size) {
-        void *storage = memalign(CACHE_LINE_SIZE, size);
-        if(NULL == storage) {
-            throw "allocation fail : no free memory";
-        }
-        return storage;
-    }
-} __attribute__((aligned(CACHE_LINE_SIZE)));
-
-// +1 to allow for MAX_DATA = 0
-CriticalData_t * gCriticalData[MAX_DATA + 1] __attribute__((aligned(CACHE_LINE_SIZE)));
-
-// Touch shared variables when inside a critical section
-void DoWorkInsideCS(){
-    for(int i = 0 ; i < MAX_DATA; i++)
-        gCriticalData[i]->data++;
-}
-
-// Each thread allocates its share of data
-void static AllocateCS(int tid, int numThreads){
-    for(int i = tid ; i < MAX_DATA; i+=numThreads) {
-        gCriticalData[i] = new CriticalData_t();
-        gCriticalData[i]->data = 0; // first touch
-    }
-#pragma omp barrier
-#pragma omp single 
-    {
-        
-        // jumble
-        srand(0);
-        for(int i = 0; i < MAX_DATA; i++) {
-            int randIndex = rand() % MAX_DATA;
-            // swap
-            CriticalData_t * tmp =  gCriticalData[randIndex];
-            gCriticalData[randIndex] = gCriticalData[i];
-            gCriticalData[i] = tmp;
-        }
-    }
-}
-
-static int64_t GetFastClockTick();
-
-// perform some dummy operations and spend time when outside critical section
-static inline void DoWorkOutsideCS(struct drand48_data * randSeedbuffer, uint64_t startCk){
-        double randNum;
-        drand48_r(randSeedbuffer, &randNum);
-        uint64_t endCk= startCk + MIN_SLEEP - DELTA_SLEEP * randNum;
-        while (GetFastClockTick() < endCk) ; // spin
-}
-/*
-void DoWorkOutsideCS(){
-    volatile uint64_t i = 0;
-    volatile uint64_t end = 4 * 1000;
-    volatile uint64_t inc = 1;
-    for (; i < end; i += inc)
-        ;
-}
-*/
-#endif
-
-
 #define handle_error_en(en, msg) \
 do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
 /* taken from https://computing.llnl.gov/tutorials/pthreads/man/pthread_setaffinity_np.txt */
-void PrintAffinity(int tid){
+void SetAffinity(int tid){
 #ifdef BLACKLIGHT
     return;
 #endif
@@ -229,19 +148,8 @@ void PrintAffinity(int tid){
     /* Set affinity mask to include CPUs tid */
     
     CPU_ZERO(&cpuset);
-#ifdef PUFF
- // SMT peers are far away!!
- if( tid & 1 == 1)
-    CPU_SET(288+tid/2, &cpuset);
- else
-    CPU_SET(tid/2, &cpuset);
-#else
     CPU_SET(1*tid, &cpuset);
-#endif
 
-    if(tid == 0 )
-        printf("CPU_SET(1*tid, &cpuset);\n");
-    
     s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
     if (s != 0)
         handle_error_en(s, "pthread_setaffinity_np");
@@ -560,7 +468,7 @@ struct IzemHMCSLock{
         
         
         for(int tid = 0 ; tid < maxThreads; tid ++){
-            PrintAffinity(threadMappings[tid]);
+            SetAffinity(threadMappings[tid]);
             // Pin me to hw-thread-id = tid
             int lastLockLocationEnd = 0;
             for(int curLevel = 0 ; curLevel < levels; curLevel++){
@@ -581,7 +489,7 @@ struct IzemHMCSLock{
         
         // setup parents
         for(int tid = 0 ; tid < maxThreads; tid ++){
-            PrintAffinity(threadMappings[tid]);
+            SetAffinity(threadMappings[tid]);
             int lastLockLocationEnd = 0;
             for(int curLevel = 0 ; curLevel < levels - 1; curLevel++){
                 if (tid%participantsAtLevel[curLevel] == 0) {
