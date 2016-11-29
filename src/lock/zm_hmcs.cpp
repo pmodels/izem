@@ -192,7 +192,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
     struct QNode{
         struct QNode * volatile next __attribute__((aligned(CACHE_LINE_SIZE)));
         volatile uint64_t status __attribute__((aligned(CACHE_LINE_SIZE)));
-        char buf[CACHE_LINE_SIZE-sizeof(uint64_t)];
+        char buf[CACHE_LINE_SIZE-sizeof(uint64_t)-sizeof(struct QNode *)];
         QNode() : status(WAIT), next(NULL) {}
         
         inline __attribute__((always_inline)) void* operator new(size_t size) {
@@ -216,8 +216,6 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
         struct HNode * parent __attribute__((aligned(CACHE_LINE_SIZE)));
         struct QNode *  volatile lock __attribute__((aligned(CACHE_LINE_SIZE)));
         struct QNode  node __attribute__((aligned(CACHE_LINE_SIZE)));
-        uint64_t contentionCounter __attribute__((aligned(CACHE_LINE_SIZE)));
-        char buf[CACHE_LINE_SIZE-sizeof(uint64_t)];
         
         inline __attribute__((always_inline)) void* operator new(size_t size) {
             void *storage = memalign(CACHE_LINE_SIZE, size);
@@ -480,7 +478,6 @@ struct IzemHMCSLock{
                     //curLock->threshold = GetThresholdAtLevel(curLevel);
                     curLock->threshold = DEFAULT_THRESHOLD;
                     curLock->parent = NULL;
-                    curLock->contentionCounter = 0;
                     curLock->lock = NULL;
                     lockLocations[lockLocation] = curLock;
                 }
@@ -501,6 +498,7 @@ struct IzemHMCSLock{
             }
             leafNodes[tid] = new HMCSLockWrapper(lockLocations[tid/participantsAtLevel[0]], levels);
         }
+        free(lockLocations);
         // Restore affinity
         pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
     }
