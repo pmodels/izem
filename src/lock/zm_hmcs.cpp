@@ -153,18 +153,22 @@ void SetAffinity(int tid){
     s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
     if (s != 0)
         handle_error_en(s, "pthread_setaffinity_np");
-#if 0
-    /* Check the actual affinity mask assigned to the thread */
-    
+}
+
+/* Check the actual affinity mask assigned to the thread */
+static inline void checkAffinity(int tid) {
+    int s, j;
+    cpu_set_t cpuset;
+    pthread_t thread = pthread_self();
     s = pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
     if (s != 0)
         handle_error_en(s, "pthread_getaffinity_np");
-    
-    printf("Set returned by pthread_getaffinity_np() contained:\n");
+
+    int num_hw_threads = 0;
     for (j = 0; j < CPU_SETSIZE; j++)
         if (CPU_ISSET(j, &cpuset))
-            printf("    %d: CPU %d\n", tid,j);
-#endif
+            num_hw_threads++;
+    assert(num_hw_threads==1);
 }
 
 #if defined(__i386__)
@@ -432,15 +436,12 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
     static int threadMappingMax;
     static int threadMappings[] = {0 , 36 , 1 , 37 , 2 , 38 , 3 , 39 , 4 , 40 , 5 , 41 , 6 , 42 , 7 , 43 , 8 , 44 , 9 , 45 , 10 , 46 , 11 , 47 , 12 , 48 , 13 , 49 , 14 , 50 , 15 , 51 , 16 , 52 , 17 , 53 , 18 , 54 , 19 , 55 , 20 , 56 , 21 , 57 , 22 , 58 , 23 , 59 , 24 , 60 , 25 , 61 , 26 , 62 , 27 , 63 , 28 , 64 , 29 , 65 , 30 , 66 , 31 , 67 , 32 , 68 , 33 , 69 , 34 , 70 , 35 , 71};
 
-
-
-
 struct IzemHMCSLock{
     // Assumes tids range from [0.. maxThreads)
     // Assumes that tid 0 is close to tid and so on.
     HNode ** lockLocations __attribute__((aligned(CACHE_LINE_SIZE)));
     HMCSLockWrapper ** leafNodes __attribute__((aligned(CACHE_LINE_SIZE)));
-    int GetRealTid(int id){ 
+    int GetHWThreadId(int id){
        for(int i = 0 ; i < threadMappingMax; i++)
            if(id == threadMappings[i])
                 return i;
@@ -506,7 +507,8 @@ struct IzemHMCSLock{
     inline __attribute__((always_inline)) __attribute__((flatten)) void Acquire(){
         if (zm_unlikely(tid == -1)) {
             tid = sched_getcpu();
-            tid = GetRealTid(tid);
+            checkAffinity(tid);
+            tid = GetHWThreadId(tid);
         }
         leafNodes[tid]->Acquire();
     }
