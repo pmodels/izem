@@ -28,11 +28,25 @@
 #define zm_atomic_ulong_t volatile unsigned long
 #else
 #include <stdatomic.h>
+/* Atomic Types */
 #define zm_atomic_uint_t  atomic_uint
 #define zm_atomic_ptr_t   atomic_intptr_t
 #define zm_atomic_ulong_t atomic_ulong
+/* Memory ordering */
+#define zm_memord_relaxed memory_order_relaxed
+#define zm_memord_consume memory_order_consume
+#define zm_memord_acquire memory_order_acquire
+#define zm_memord_release memory_order_release
+#define zm_memord_acq_rel memory_order_acq_rel
+#define zm_memord_seq_cst memory_order_seq_cst
+/* Atomic Operations */
+#define zm_atomic_load              atomic_load_explicit
+#define zm_atomic_store             atomic_store_explicit
+#define zm_atomic_exchange          atomic_exchange_explicit
+#define zm_atomic_fetch_add         atomic_fetch_add_explicit
+#define zm_atomic_flag_test_and_set atomic_flag_test_and_set_explicit
+#define zm_atomic_flag_clear        atomic_flag_clear_explicit
 #endif
-
 #else
 #include <opa_primitives.h>
 #endif

@@ -10,8 +10,8 @@ int zm_msqueue_init(zm_msqueue_t *q) {
     zm_msqnode_t* node = (zm_msqnode_t*) malloc(sizeof(zm_msqnode_t));
     node->data = NULL;
     node->next = ZM_NULL;
-    atomic_store_explicit(&q->head, (zm_ptr_t)node, memory_order_release);
-    atomic_store_explicit(&q->tail, (zm_ptr_t)node, memory_order_release);
+    zm_atomic_store(&q->head, (zm_ptr_t)node, zm_memord_release);
+    zm_atomic_store(&q->tail, (zm_ptr_t)node, zm_memord_release);
     return 0;
 }
 
@@ -21,33 +21,33 @@ int zm_msqueue_enqueue(zm_msqueue_t* q, void *data) {
     zm_hzdptr_t *hzdptrs = zm_hzdptr_get();
     zm_msqnode_t* node = (zm_msqnode_t*) malloc(sizeof(zm_msqnode_t));
     node->data = data;
-    atomic_store_explicit(&node->next, ZM_NULL, memory_order_release);
+    zm_atomic_store(&node->next, ZM_NULL, zm_memord_release);
     while (1) {
-        tail = (zm_ptr_t) atomic_load_explicit(&q->tail, memory_order_acquire);
+        tail = (zm_ptr_t) zm_atomic_load(&q->tail, zm_memord_acquire);
         hzdptrs[0] = tail;
-        if(tail == atomic_load_explicit(&q->tail, memory_order_acquire)) {
-            next = (zm_ptr_t) atomic_load_explicit(&((zm_msqnode_t*)tail)->next, memory_order_acquire);
+        if(tail == zm_atomic_load(&q->tail, zm_memord_acquire)) {
+            next = (zm_ptr_t) zm_atomic_load(&((zm_msqnode_t*)tail)->next, zm_memord_acquire);
             if (next == ZM_NULL) {
                 if (atomic_compare_exchange_weak_explicit(&((zm_msqnode_t*)tail)->next,
                                                       &next,
                                                       (zm_ptr_t)node,
-                                                      memory_order_release,
-                                                      memory_order_acquire))
+                                                      zm_memord_release,
+                                                      zm_memord_acquire))
                     break;
             } else {
                 atomic_compare_exchange_weak_explicit(&q->tail,
                                                       &tail,
                                                       (zm_ptr_t)next,
-                                                      memory_order_release,
-                                                      memory_order_acquire);
+                                                      zm_memord_release,
+                                                      zm_memord_acquire);
             }
         }
     }
     atomic_compare_exchange_weak_explicit(&q->tail,
                                           &tail,
                                           (zm_ptr_t)node,
-                                          memory_order_release,
-                                          memory_order_acquire);
+                                          zm_memord_release,
+                                          zm_memord_acquire);
     return 0;
 }
 
@@ -58,25 +58,25 @@ int zm_msqueue_dequeue(zm_msqueue_t* q, void **data) {
     zm_hzdptr_t *hzdptrs = zm_hzdptr_get();
     *data = NULL;
     while (1) {
-        head = (zm_ptr_t) atomic_load_explicit(&q->head, memory_order_acquire);
+        head = (zm_ptr_t) zm_atomic_load(&q->head, zm_memord_acquire);
         hzdptrs[0] = head;
         if(head == q->head) {
-            tail = (zm_ptr_t) atomic_load_explicit(&q->tail, memory_order_acquire);
-            next = (zm_ptr_t) atomic_load_explicit(&((zm_msqnode_t*)head)->next, memory_order_acquire);
+            tail = (zm_ptr_t) zm_atomic_load(&q->tail, zm_memord_acquire);
+            next = (zm_ptr_t) zm_atomic_load(&((zm_msqnode_t*)head)->next, zm_memord_acquire);
             hzdptrs[1] = next;
             if (head == tail) {
                 if (next == ZM_NULL) return 0;
                 atomic_compare_exchange_weak_explicit(&q->tail,
                                                       &tail,
                                                       (zm_ptr_t)next,
-                                                      memory_order_release,
-                                                      memory_order_acquire);
+                                                      zm_memord_release,
+                                                      zm_memord_acquire);
             } else {
                 if (atomic_compare_exchange_weak_explicit(&q->head,
                                                       &head,
                                                       (zm_ptr_t)next,
-                                                      memory_order_release,
-                                                      memory_order_acquire)) {
+                                                      zm_memord_release,
+                                                      zm_memord_acquire)) {
                     *data = ((zm_msqnode_t*)next)->data;
                     break;
                 }

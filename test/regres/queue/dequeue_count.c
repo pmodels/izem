@@ -15,7 +15,7 @@ struct thread_data {
     zm_absqueue_t* queue;
 };
 
-zm_atomic_uint test_counter = 0;
+zm_atomic_uint_t test_counter = 0;
 
 static void* func(void *arg) {
 #if defined(ZMTEST_ALLOC_QELEM)
@@ -54,11 +54,11 @@ static void* func(void *arg) {
 #endif
         }
     } else {           /* consumer */
-        while(atomic_load_explicit(&test_counter, memory_order_acquire) < nelem_deq) {
+        while(zm_atomic_load(&test_counter, zm_memord_acquire) < nelem_deq) {
             int* elem = NULL;
             zm_absqueue_dequeue(queue, (void**)&elem);
             if ((elem != NULL) && (*elem == 1)) {
-                    atomic_fetch_add_explicit(&test_counter, 1, memory_order_acq_rel);
+                    zm_atomic_fetch_add(&test_counter, 1, zm_memord_acq_rel);
 #if defined(ZMTEST_ALLOC_QELEM)
             free(elem);
 #endif
@@ -88,7 +88,7 @@ static void run() {
     zm_absqueue_t queue;
     zm_absqueue_init(&queue);
 
-    atomic_store_explicit(&test_counter, 0, memory_order_release);
+    zm_atomic_store(&test_counter, 0, zm_memord_release);
 
     for (int th=0; th < TEST_NTHREADS; th++) {
         data[th].tid = th;
