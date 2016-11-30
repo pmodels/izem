@@ -15,7 +15,7 @@ struct thread_data {
     zm_absqueue_t* queue;
 };
 
-atomic_uint test_counter = 0;
+zm_atomic_uint test_counter = 0;
 
 static void* func(void *arg) {
 #if defined(ZMTEST_ALLOC_QELEM)
