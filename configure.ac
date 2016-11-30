@@ -122,6 +122,19 @@ AS_IF([test "x$debug_flags" = "xyes"], [CFLAGS="$CFLAGS -g -O0 -Wall"])
 AS_IF([test "x$debug_log" = "xyes"],
     [AC_DEFINE(ZM_CONFIG_USE_DEBUG_LOG, 1, [Define to enable debug logging])])
 
+# Testing for atomic
+
+AC_MSG_CHECKING([for gcc __atomic builtins (memory model aware)])
+have_gcc_atomic_mem_aware_builtins=no
+AC_TRY_LINK(
+  [], [char l; unsigned long v; __atomic_test_and_set(&l, __ATOMIC_RELAXED); __atomic_store_n(&v, 1, __ATOMIC_RELEASE); __atomic_load_n(&v, __ATOMIC_ACQUIRE);],
+  [have_gcc_atomic_mem_aware_builtins=yes],
+)
+if test "x$have_gcc_atomic_mem_aware_builtins" = "xyes"; then
+  AC_DEFINE([HAVE_GCC_MEM_AWARE_ATOMIC_BUILTINS], [1], [Define if the gcc __atomic builtins (memory model aware) are available])
+fi
+AC_MSG_RESULT([$have_gcc_atomic_mem_aware_builtins])
+
 
 AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.11.3 subdir-objects])
 
