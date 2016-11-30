@@ -10,8 +10,8 @@ int zm_msqueue_init(zm_msqueue_t *q) {
     zm_msqnode_t* node = (zm_msqnode_t*) malloc(sizeof(zm_msqnode_t));
     node->data = NULL;
     node->next = ZM_NULL;
-    atomic_store(&q->head, (zm_ptr_t)node);
-    atomic_store(&q->tail, (zm_ptr_t)node);
+    atomic_store_explicit(&q->head, (zm_ptr_t)node, memory_order_release);
+    atomic_store_explicit(&q->tail, (zm_ptr_t)node, memory_order_release);
     return 0;
 }
 
@@ -21,7 +21,7 @@ int zm_msqueue_enqueue(zm_msqueue_t* q, void *data) {
     zm_hzdptr_t *hzdptrs = zm_hzdptr_get();
     zm_msqnode_t* node = (zm_msqnode_t*) malloc(sizeof(zm_msqnode_t));
     node->data = data;
-    atomic_store(&node->next, ZM_NULL);
+    atomic_store_explicit(&node->next, ZM_NULL, memory_order_release);
     while (1) {
         tail = (zm_ptr_t) atomic_load_explicit(&q->tail, memory_order_acquire);
         hzdptrs[0] = tail;

@@ -8,7 +8,7 @@
 
 int zm_mcs_init(zm_mcs_t *L)
 {
-    atomic_store(L, (zm_ptr_t)ZM_NULL);
+    atomic_store_explicit(L, (zm_ptr_t)ZM_NULL, memory_order_release);
     return 0;
 }
 

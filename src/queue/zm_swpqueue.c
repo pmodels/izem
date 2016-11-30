@@ -9,8 +9,8 @@ int zm_swpqueue_init(zm_swpqueue_t *q) {
     zm_swpqnode_t* node = (zm_swpqnode_t*) malloc(sizeof(zm_swpqnode_t));
     node->data = NULL;
     node->next = ZM_NULL;
-    atomic_store(&q->head, (zm_ptr_t)node);
-    atomic_store(&q->tail, (zm_ptr_t)node);
+    atomic_store_explicit(&q->head, (zm_ptr_t)node, memory_order_release);
+    atomic_store_explicit(&q->tail, (zm_ptr_t)node, memory_order_release);
     return 0;
 }
 

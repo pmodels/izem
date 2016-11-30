@@ -8,7 +8,7 @@
 
 int zm_csvmcs_init(zm_csvmcs_t *L)
 {
-    atomic_store(&L->lock, ZM_NULL);
+    atomic_store_explicit(&L->lock, ZM_NULL, memory_order_release);
     L->cur_ctx = (zm_mcs_qnode_t*)ZM_NULL;
     return 0;
 }

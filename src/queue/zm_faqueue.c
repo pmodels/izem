@@ -54,9 +54,9 @@ static inline zm_facell_t *zm_facell_find(zm_faseg_t **seg, zm_ulong_t cell_id) 
 
 int zm_faqueue_init(zm_faqueue_t *q) {
     q->head = 0;
-    atomic_store(&q->tail, 0);
+    atomic_store_explicit(&q->tail, 0, memory_order_release);
     q->seg_head = (zm_ptr_t)zm_faseg_alloc(0);
-    atomic_store(&q->seg_tail, q->seg_head);
+    atomic_store_explicit(&q->seg_tail, q->seg_head, memory_order_release);
     return 0;
 }
 

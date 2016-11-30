@@ -7,8 +7,8 @@
 
 int zm_ticket_init(zm_ticket_t *lock)
 {
-    atomic_store(&lock->next_ticket, 0);
-    atomic_store(&lock->now_serving, 0);
+    atomic_store_explicit(&lock->next_ticket, 0, memory_order_release);
+    atomic_store_explicit(&lock->now_serving, 0, memory_order_release);
     return 0;
 }
 

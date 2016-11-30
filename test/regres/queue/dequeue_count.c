@@ -88,7 +88,7 @@ static void run() {
     zm_absqueue_t queue;
     zm_absqueue_init(&queue);
 
-    atomic_store(&test_counter, 0);
+    atomic_store_explicit(&test_counter, 0, memory_order_release);
 
     for (int th=0; th < TEST_NTHREADS; th++) {
         data[th].tid = th;
