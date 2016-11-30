@@ -19,9 +19,9 @@ cs_thruput_tkt_SOURCES = cs_thruput.c
 cs_thruput_mcs_SOURCES = cs_thruput.c
 cs_thruput_csvmcs_SOURCES = cs_thruput.c
 
-cs_thruput_tkt_CFLAGS = -DZMTEST_USE_TICKET
-cs_thruput_mcs_CFLAGS = -DZMTEST_USE_MCS
-cs_thruput_csvmcs_CFLAGS = -DZMTEST_USE_CSVMCS
+cs_thruput_tkt_CFLAGS = -DZMTEST_USE_TICKET -D_GNU_SOURCE
+cs_thruput_mcs_CFLAGS = -DZMTEST_USE_MCS -D_GNU_SOURCE
+cs_thruput_csvmcs_CFLAGS = -DZMTEST_USE_CSVMCS -D_GNU_SOURCE
 
 cs_thruput_tkt_LDFLAGS = -pthread
 cs_thruput_mcs_LDFLAGS = -pthread
