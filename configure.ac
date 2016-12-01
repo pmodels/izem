@@ -135,6 +135,22 @@ if test "x$have_gcc_atomic_mem_aware_builtins" = "xyes"; then
 fi
 AC_MSG_RESULT([$have_gcc_atomic_mem_aware_builtins])
 
+AC_MSG_CHECKING([for C11 atomics])
+have_c11_atomics=no
+AC_TRY_LINK(
+  [], [#include <stdatomic.h>
+       atomic_char l;
+       atomic_long v;
+       atomic_flag_test_and_set_explicit(&l, memory_order_relaxed);
+       atomic_store_explicit(&v, 1, memory_order_release);
+       atomic_load_explicit(&v, memory_order_acquire);],
+  [have_c11_atomics=yes],
+)
+if test "x$have_c11_atomics" = "xyes"; then
+  AC_DEFINE([HAVE_C11_ATOMICS], [1], [Define if the C11 atomics are available])
+fi
+AC_MSG_RESULT([$have_c11_atomics])
+
 
 AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.11.3 subdir-objects])
 
