@@ -21,13 +21,13 @@ typedef struct zm_hzdptr_lnode zm_hzdptr_lnode_t;
  * It is lock-free and only supports the push_back() operation */
 struct zm_hzdptr_lnode {
     zm_hzdptr_t hzdptrs[ZM_HZDPTR_NUM];
-    atomic_flag active;
+    zm_atomic_flag_t active;
     zm_sdlist_t rlist;
     zm_atomic_ptr_t next;
 };
 
 extern zm_atomic_ptr_t zm_hzdptr_list; /* head of the list*/
-extern atomic_uint zm_hplist_length; /* N: correlates with the number
+extern zm_atomic_uint_t zm_hplist_length; /* N: correlates with the number
                                         of threads */
 
 /* per-thread pointer to its own hazard pointer node */
@@ -52,11 +52,11 @@ static inline void zm_hzdptr_allocate() {
     do {
         old_hplhead = (zm_ptr_t) zm_atomic_load(&zm_hzdptr_list, zm_memord_acquire);
         zm_atomic_store(&cur_hplnode->next, old_hplhead, zm_memord_release);
-    } while(!atomic_compare_exchange_weak_explicit(&zm_hzdptr_list,
-                                                   &old_hplhead,
-                                                   (zm_ptr_t)cur_hplnode,
-                                                   zm_memord_release,
-                                                   zm_memord_acquire));
+    } while(!zm_atomic_compare_exchange_weak(&zm_hzdptr_list,
+                                             &old_hplhead,
+                                             (zm_ptr_t)cur_hplnode,
+                                             zm_memord_release,
+                                             zm_memord_acquire));
     zm_my_hplnode = cur_hplnode;
     for(int i=0; i<ZM_HZDPTR_NUM; i++)
         zm_my_hplnode->hzdptrs[i] = ZM_NULL;
@@ -101,7 +101,7 @@ static inline void zm_hzdptr_helpscan() {
                2 * zm_atomic_load(&zm_hplist_length, zm_memord_acquire))
                 zm_hzdptr_scan();
         }
-        atomic_flag_clear_explicit(&cur_hplnode->active, zm_memord_release);
+        zm_atomic_flag_clear(&cur_hplnode->active, zm_memord_release);
         cur_hplnode = (zm_hzdptr_lnode_t*)zm_atomic_load(&cur_hplnode->next, zm_memord_acquire);
     }
 }

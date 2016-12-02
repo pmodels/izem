@@ -34,11 +34,11 @@ int zm_csvmcs_release(zm_csvmcs_t *L) {
     L->cur_ctx = (zm_mcs_qnode_t*)ZM_NULL;
     if (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL) {
         zm_mcs_qnode_t *tmp = I;
-        if(atomic_compare_exchange_weak_explicit(&L->lock,
-                                                 (zm_ptr_t*)&tmp,
-                                                 ZM_NULL,
-                                                 zm_memord_release,
-                                                 zm_memord_acquire))
+        if(zm_atomic_compare_exchange_weak(&L->lock,
+                                          (zm_ptr_t*)&tmp,
+                                          ZM_NULL,
+                                          zm_memord_release,
+                                          zm_memord_acquire))
             return 0;
         while(zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL)
             ; /* SPIN */

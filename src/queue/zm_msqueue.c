@@ -28,26 +28,26 @@ int zm_msqueue_enqueue(zm_msqueue_t* q, void *data) {
         if(tail == zm_atomic_load(&q->tail, zm_memord_acquire)) {
             next = (zm_ptr_t) zm_atomic_load(&((zm_msqnode_t*)tail)->next, zm_memord_acquire);
             if (next == ZM_NULL) {
-                if (atomic_compare_exchange_weak_explicit(&((zm_msqnode_t*)tail)->next,
-                                                      &next,
-                                                      (zm_ptr_t)node,
-                                                      zm_memord_release,
-                                                      zm_memord_acquire))
+                if (zm_atomic_compare_exchange_weak(&((zm_msqnode_t*)tail)->next,
+                                                    &next,
+                                                    (zm_ptr_t)node,
+                                                    zm_memord_release,
+                                                    zm_memord_acquire))
                     break;
             } else {
-                atomic_compare_exchange_weak_explicit(&q->tail,
-                                                      &tail,
-                                                      (zm_ptr_t)next,
-                                                      zm_memord_release,
-                                                      zm_memord_acquire);
+                zm_atomic_compare_exchange_weak(&q->tail,
+                                                &tail,
+                                                (zm_ptr_t)next,
+                                                zm_memord_release,
+                                                zm_memord_acquire);
             }
         }
     }
-    atomic_compare_exchange_weak_explicit(&q->tail,
-                                          &tail,
-                                          (zm_ptr_t)node,
-                                          zm_memord_release,
-                                          zm_memord_acquire);
+    zm_atomic_compare_exchange_weak(&q->tail,
+                                    &tail,
+                                    (zm_ptr_t)node,
+                                    zm_memord_release,
+                                    zm_memord_acquire);
     return 0;
 }
 
@@ -66,17 +66,17 @@ int zm_msqueue_dequeue(zm_msqueue_t* q, void **data) {
             hzdptrs[1] = next;
             if (head == tail) {
                 if (next == ZM_NULL) return 0;
-                atomic_compare_exchange_weak_explicit(&q->tail,
-                                                      &tail,
-                                                      (zm_ptr_t)next,
-                                                      zm_memord_release,
-                                                      zm_memord_acquire);
+                zm_atomic_compare_exchange_weak(&q->tail,
+                                                &tail,
+                                                (zm_ptr_t)next,
+                                                zm_memord_release,
+                                                zm_memord_acquire);
             } else {
-                if (atomic_compare_exchange_weak_explicit(&q->head,
-                                                      &head,
-                                                      (zm_ptr_t)next,
-                                                      zm_memord_release,
-                                                      zm_memord_acquire)) {
+                if (zm_atomic_compare_exchange_weak(&q->head,
+                                                    &head,
+                                                    (zm_ptr_t)next,
+                                                    zm_memord_release,
+                                                    zm_memord_acquire)) {
                     *data = ((zm_msqnode_t*)next)->data;
                     break;
                 }
