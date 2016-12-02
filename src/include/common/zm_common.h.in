@@ -3,6 +3,8 @@
  * See COPYRIGHT in top-level directory.
  */
 
+/*@configure_input@*/
+
 #ifndef _ZM_COMMON_H
 #define _ZM_COMMON_H
 
@@ -19,9 +21,11 @@
 
 #define ZM_NULL (zm_ptr_t)NULL
 
-/* FIXME Test for C11 atomic types and functions in configure. */
-#if !defined(__STDC_NO_ATOMICS__)
+#define ZM_MEMORY_MODEL_C11 1
+#define ZM_MEMORY_MODEL_GCC_ATOM 2
+#define ZM_MEMORY_MODEL @ZM_MEMORY_MODEL@
 
+#if ZM_MEMORY_MODEL == ZM_MEMORY_MODEL_C11
 #if defined(_OPENMP)
 #define zm_atomic_uint_t  volatile unsigned int
 #define zm_atomic_ptr_t   volatile zm_ptr_t

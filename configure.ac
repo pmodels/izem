@@ -151,6 +151,16 @@ if test "x$have_c11_atomics" = "xyes"; then
 fi
 AC_MSG_RESULT([$have_c11_atomics])
 
+if test "x$have_c11_atomics" = "xyes"; then
+  memory_model="C11"
+else
+    if test "x$have_gcc_atomic_mem_aware_builtins" = "xyes"; then
+        memory_model="GCC_ATOM"
+    fi
+fi
+
+ZM_MEMORY_MODEL=ZM_MEMORY_MODEL_$memory_model
+AC_SUBST(ZM_MEMORY_MODEL)
 
 AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.11.3 subdir-objects])
 
@@ -184,6 +194,7 @@ AC_CONFIG_FILES([Makefile
                  Doxyfile
                  maint/izem.pc
                  src/Makefile
+                 src/include/common/zm_common.h
                  test/Makefile
                  test/regres/Makefile
                  test/regres/lock/Makefile
