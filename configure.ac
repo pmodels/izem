@@ -195,6 +195,7 @@ AC_CONFIG_FILES([Makefile
                  maint/izem.pc
                  src/Makefile
                  src/include/common/zm_common.h
+                 src/include/lock/zm_lock_types.h
                  test/Makefile
                  test/regres/Makefile
                  test/regres/lock/Makefile
