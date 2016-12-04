@@ -162,6 +162,44 @@ fi
 ZM_MEMORY_MODEL=ZM_MEMORY_MODEL_$memory_model
 AC_SUBST(ZM_MEMORY_MODEL)
 
+# TLP lock components
+AC_ARG_WITH([tlp_locks],
+[  --with-tlp-locks@<:@=HIGH-LOW@:>@   define the high and low priority locks
+                          in the TLP lock. HIGH and LOW represent the locks
+                          used by the high priority and low priority threads,
+                          repspectively,
+                          tkt-tkt  - both are ticket locks (default)
+                          mcs-mcs  - both are mcs locks
+                          tkt-mcs  - HIGH is ticket LOW is MCS
+                          mcs-tkt  - HIGH is MCS LOW is ticket
+],,
+[with_tlp_locks=tkt-tkt])
+
+case "$with_tlp_locks" in
+    tkt-tkt)
+        ZM_TLP_HIGH_P=ZM_TICKET
+        ZM_TLP_LOW_P=ZM_TICKET
+    ;;
+    mcs-mcs)
+        ZM_TLP_HIGH_P=ZM_MCS
+        ZM_TLP_LOW_P=ZM_MCS
+    ;;
+    tkt-mcs)
+        ZM_TLP_HIGH_P=ZM_TICKET
+        ZM_TLP_LOW_P=ZM_MCS
+    ;;
+    mcs-tkt)
+        ZM_TLP_HIGH_P=ZM_MCS
+        ZM_TLP_LOW_P=ZM_TICKET
+    ;;
+    *)
+        AC_MSG_WARN([Unknown value $with_tlp_locks for with-tlp-locks])
+    ;;
+esac
+
+AC_SUBST(ZM_TLP_HIGH_P)
+AC_SUBST(ZM_TLP_LOW_P)
+
 AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.11.3 subdir-objects])
 
 AM_SILENT_RULES([yes])
