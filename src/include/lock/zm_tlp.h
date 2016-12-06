@@ -11,12 +11,12 @@
 #include "lock/zm_ticket.h"
 #endif
 #if (ZM_TLP_HIGH_P == ZM_MCS) || (ZM_TLP_LOW_P  == ZM_MCS)
-#include "lock/zm_mcs.h"
+#include "lock/zm_csvmcs.h"
 #endif
 
 int zm_tlp_init(zm_tlp_t *);
-int zm_tlp_acquire(zm_tlp_t* lock);
-int zm_tlp_acquire_low(zm_tlp_t* lock);
+int zm_tlp_acquire(zm_tlp_t* lock, zm_tlp_ctxt_t*);
+int zm_tlp_acquire_low(zm_tlp_t* lock, zm_tlp_ctxt_t*);
 int zm_tlp_release(zm_tlp_t* lock);
 
 #endif /* _ZM_TLP_H */
