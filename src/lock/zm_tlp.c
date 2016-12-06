@@ -109,7 +109,7 @@ int zm_tlp_acquire(zm_tlp_t *L) {
                                           ZM_STATUS_REQUEST,
                                           zm_memord_release,
                                           zm_memord_acquire)) {
-            while(zm_atomic_load(&L->common, zm_memord_acquire) == ZM_STATUS_GRANTED)
+            while(zm_atomic_load(&L->common, zm_memord_acquire) != ZM_STATUS_GRANTED)
                 ; //SPIN
             break;
         }
@@ -141,7 +141,7 @@ int zm_tlp_release(zm_tlp_t *L) {
     unsigned int expected = ZM_STATUS_REQUEST;
     if(!zm_atomic_compare_exchange_weak(&L->common,
                                         &expected,
-                                        ZM_STATUS_FREE,
+                                        ZM_STATUS_GRANTED,
                                         zm_memord_release,
                                         zm_memord_acquire))
         zm_atomic_store(&L->common, ZM_STATUS_FREE, zm_memord_release);
