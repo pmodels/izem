@@ -13,6 +13,10 @@
 #if (ZM_TLP_HIGH_P == ZM_MCS) || (ZM_TLP_LOW_P  == ZM_MCS)
 #include "lock/zm_mcs.h"
 #endif
+#if (ZM_TLP_HIGH_P == ZM_HMCS) || (ZM_TLP_LOW_P  == ZM_HMCS)
+#include "lock/zm_hmcs.h"
+#endif
+
 
 int zm_tlp_init(zm_tlp_t *);
 int zm_tlp_acquire(zm_tlp_t* lock);

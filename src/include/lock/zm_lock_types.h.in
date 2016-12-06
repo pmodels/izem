@@ -35,6 +35,10 @@ struct zm_csvmcs {
     zm_mcs_qnode_t* cur_ctx __attribute__((aligned(64)));
 };
 
+/* HMCS */
+
+typedef zm_ptr_t zm_hmcs_t;
+
 /* Two-Level Priority */
 #define ZM_TICKET   1
 #define ZM_MCS      2
@@ -53,14 +57,17 @@ struct zm_tlp {
    zm_ticket_t high_p __attribute__((aligned(64)));
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
    zm_mcs_t high_p __attribute__((aligned(64)));
+#elif (ZM_TLP_HIGH_P == ZM_HMCS)
+   zm_hmcs_t high_p __attribute__((aligned(64)));
 #endif
    zm_atomic_uint_t common __attribute__((aligned(64)));
 #if (ZM_TLP_LOW_P == ZM_TICKET)
    zm_ticket_t low_p __attribute__((aligned(64)));
 #elif (ZM_TLP_LOW_P == ZM_MCS)
    zm_mcs_t low_p __attribute__((aligned(64)));
+#elif (ZM_TLP_LOW_P == ZM_HMCS)
+   zm_hmcs_t low_p __attribute__((aligned(64)));
 #endif
 };
-typedef zm_ptr_t zm_hmcs_t;
 
 #endif /* _IZEM_LOCK_TYPES_H */
