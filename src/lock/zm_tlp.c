@@ -48,6 +48,8 @@ unlock(low_p)
 #define zm_tlp_init_high_p(L) zm_ticket_init(&L->high_p)
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
 #define zm_tlp_init_high_p(L) zm_mcs_init(&L->high_p)
+#elif (ZM_TLP_HIGH_P == ZM_HMCS)
+#define zm_tlp_init_high_p(L) zm_hmcs_init(&L->high_p)
 #endif
 
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
@@ -56,18 +58,24 @@ unlock(low_p)
 #define zm_tlp_acquire_high_p(L)                        \
     zm_mcs_qnode_t local_ctxt;                          \
     zm_mcs_acquire(&L->high_p, &local_ctxt)
+#elif (ZM_TLP_HIGH_P == ZM_HMCS)
+#define zm_tlp_acquire_high_p(L) zm_hmcs_acquire(L->high_p)
 #endif
 
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
 #define zm_tlp_release_high_p(L) zm_ticket_release(&L->high_p)
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
 #define zm_tlp_release_high_p(L) zm_mcs_release(&L->high_p, &local_ctxt);
+#elif (ZM_TLP_HIGH_P == ZM_HMCS)
+#define zm_tlp_release_high_p(L) zm_hmcs_release(L->high_p);
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
 #define zm_tlp_init_low_p(L) zm_ticket_init(&L->low_p)
 #elif (ZM_TLP_LOW_P == ZM_MCS)
 #define zm_tlp_init_low_p(L) zm_mcs_init(&L->low_p)
+#elif (ZM_TLP_LOW_P == ZM_HMCS)
+#define zm_tlp_init_low_p(L) zm_hmcs_init(&L->low_p)
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
@@ -76,12 +84,16 @@ unlock(low_p)
 #define zm_tlp_acquire_low_p(L)                         \
     zm_mcs_qnode_t local_ctxt;                          \
     zm_mcs_acquire(&L->low_p, &local_ctxt)
+#elif (ZM_TLP_LOW_P == ZM_HMCS)
+#define zm_tlp_acquire_low_p(L) zm_hmcs_acquire(L->low_p)
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
 #define zm_tlp_release_low_p(L) zm_ticket_release(&L->low_p)
 #elif (ZM_TLP_LOW_P == ZM_MCS)
 #define zm_tlp_release_low_p(L) zm_mcs_release(&L->low_p, &local_ctxt);
+#elif (ZM_TLP_LOW_P == ZM_HMCS)
+#define zm_tlp_release_low_p(L) zm_hmcs_release(L->low_p)
 #endif
 
 int zm_tlp_init(zm_tlp_t *L)
