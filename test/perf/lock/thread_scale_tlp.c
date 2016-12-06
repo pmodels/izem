@@ -10,6 +10,9 @@
 
 #define TEST_NITER 100000
 
+char cache_lines[640] = {0};
+int indices [] = {3,6,1,7,0,2,9,4,8,5};
+
 static void test_thruput()
 {
     unsigned nthreads = omp_get_max_threads();
@@ -32,6 +35,12 @@ static void test_thruput()
                 zm_tlp_acquire(&lock);
             else
                zm_tlp_acquire_low(&lock);
+
+            /* Computation */
+
+            for(int i = 0; i < 10; i++)
+                 cache_lines[indices[i]] += cache_lines[indices[9-i]];
+
 
             zm_tlp_release(&lock);
         }
