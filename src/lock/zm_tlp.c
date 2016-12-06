@@ -47,51 +47,54 @@ unlock(low_p)
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
 #define zm_tlp_init_high_p(L) zm_ticket_init(&L->high_p)
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
-#define zm_tlp_init_high_p(L) zm_csvmcs_init(&L->high_p)
+#define zm_tlp_init_high_p(L) zm_mcs_init(&L->high_p)
 #endif
 
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
-#define zm_tlp_acquire_high_p(L, local_ctxt) zm_ticket_acquire(&L->high_p)
+#define zm_tlp_acquire_high_p(L) zm_ticket_acquire(&L->high_p)
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
-#define zm_tlp_acquire_high_p(L, local_ctxt) zm_csvmcs_acquire(&L->high_p, local_ctxt)
+#define zm_tlp_acquire_high_p(L)                        \
+    zm_mcs_qnode_t local_ctxt;                          \
+    zm_mcs_acquire(&L->high_p, &local_ctxt)
 #endif
 
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
 #define zm_tlp_release_high_p(L) zm_ticket_release(&L->high_p)
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
-#define zm_tlp_release_high_p(L) zm_csvmcs_release(&L->high_p);
+#define zm_tlp_release_high_p(L) zm_mcs_release(&L->high_p, &local_ctxt);
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
 #define zm_tlp_init_low_p(L) zm_ticket_init(&L->low_p)
 #elif (ZM_TLP_LOW_P == ZM_MCS)
-#define zm_tlp_init_low_p(L) zm_csvmcs_init(&L->low_p)
+#define zm_tlp_init_low_p(L) zm_mcs_init(&L->low_p)
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
-#define zm_tlp_acquire_low_p(L, local_ctxt) zm_ticket_acquire(&L->low_p)
+#define zm_tlp_acquire_low_p(L) zm_ticket_acquire(&L->low_p)
 #elif (ZM_TLP_LOW_P == ZM_MCS)
-#define zm_tlp_acquire_low_p(L, local_ctxt) zm_csvmcs_acquire(&L->low_p, local_ctxt)
+#define zm_tlp_acquire_low_p(L)                         \
+    zm_mcs_qnode_t local_ctxt;                          \
+    zm_mcs_acquire(&L->low_p, &local_ctxt)
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
 #define zm_tlp_release_low_p(L) zm_ticket_release(&L->low_p)
 #elif (ZM_TLP_LOW_P == ZM_MCS)
-#define zm_tlp_release_low_p(L) zm_csvmcs_release(&L->low_p);
+#define zm_tlp_release_low_p(L) zm_mcs_release(&L->low_p, &local_ctxt);
 #endif
 
 int zm_tlp_init(zm_tlp_t *L)
 {
    zm_tlp_init_high_p(L);
    zm_atomic_store(&L->common, ZM_STATUS_FREE, zm_memord_release);
-   L->low_p_acquisition = 0;
    zm_tlp_init_low_p(L);
     return 0;
 }
 
-int zm_tlp_acquire(zm_tlp_t *L, zm_tlp_ctxt_t *local_ctxt) {
+int zm_tlp_acquire(zm_tlp_t *L) {
     /* Acquire the high priority lock */
-   zm_tlp_acquire_high_p(L, local_ctxt);
+   zm_tlp_acquire_high_p(L);
 
    unsigned int old;
    old = zm_atomic_exchange(&L->common,
@@ -107,9 +110,9 @@ int zm_tlp_acquire(zm_tlp_t *L, zm_tlp_ctxt_t *local_ctxt) {
     return 0;
 }
 
-int zm_tlp_acquire_low(zm_tlp_t *L, zm_tlp_ctxt_t *local_ctxt) {
+int zm_tlp_acquire_low(zm_tlp_t *L) {
     /* Acquire the low priority lock */
-   zm_tlp_acquire_low_p(L, local_ctxt);
+   zm_tlp_acquire_low_p(L);
    do {
         while(zm_atomic_load(&L->common, zm_memord_acquire) != ZM_STATUS_FREE)
             ; // SPIN
@@ -121,12 +124,13 @@ int zm_tlp_acquire_low(zm_tlp_t *L, zm_tlp_ctxt_t *local_ctxt) {
                                           zm_memord_acquire))
             break;
     } while (1);
-    L->low_p_acquisition = 1;
+    zm_tlp_release_low_p(L);
     return 0;
 }
 
-static inline void release_common (zm_tlp_t *L) {
-    unsigned int expected;
+/* Release the lock */
+int zm_tlp_release(zm_tlp_t *L) {
+    unsigned int expected = ZM_STATUS_REQUEST;
     do {
         expected = ZM_STATUS_REQUEST;
         if(zm_atomic_compare_exchange_weak(&L->common,
@@ -144,15 +148,5 @@ static inline void release_common (zm_tlp_t *L) {
                                            zm_memord_acquire))
             break;
     } while (1);
-}
-
-/* Release the lock */
-int zm_tlp_release(zm_tlp_t *L) {
-    if (L->low_p_acquisition) {
-        L->low_p_acquisition = 0;
-        release_common(L);
-        zm_tlp_release_low_p(L);
-    } else
-        release_common(L);
     return 0;
 }
