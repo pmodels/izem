@@ -52,13 +52,13 @@ struct zm_tlp {
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
    zm_ticket_t high_p __attribute__((aligned(64)));
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
-   zm_csvmcs_t high_p __attribute__((aligned(64)));
+   zm_mcs_t high_p __attribute__((aligned(64)));
 #endif
    zm_atomic_uint_t common __attribute__((aligned(64)));
 #if (ZM_TLP_LOW_P == ZM_TICKET)
    zm_ticket_t low_p __attribute__((aligned(64)));
 #elif (ZM_TLP_LOW_P == ZM_MCS)
-   zm_csvmcs_t low_p __attribute__((aligned(64)));
+   zm_mcs_t low_p __attribute__((aligned(64)));
 #endif
 };
 
