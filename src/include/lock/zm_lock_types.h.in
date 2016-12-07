@@ -70,4 +70,14 @@ struct zm_tlp {
 #endif
 };
 
+typedef struct zm_mcsp zm_mcsp_t;
+
+struct zm_mcsp {
+    zm_mcs_t high_p __attribute__((aligned(64)));
+    int go_straight;
+    int low_p_acq __attribute__((aligned(64)));
+    zm_ticket_t filter __attribute__((aligned(64)));
+    zm_mcs_t low_p __attribute__((aligned(64)));
+};
+
 #endif /* _IZEM_LOCK_TYPES_H */
