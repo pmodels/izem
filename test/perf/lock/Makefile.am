@@ -13,6 +13,6 @@ include $(top_srcdir)/test/Makefile.mk
 
 thread_scale_tlp_SOURCES = thread_scale_tlp.c
 
-thread_scale_tlp_CFLAGS = -fopenmp
+thread_scale_tlp_CFLAGS = -DZMTEST_USE_TLP -fopenmp
 
 thread_scale_tlp_LDFLAGS = -fopenmp
