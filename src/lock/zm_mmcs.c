@@ -46,3 +46,8 @@ int zm_mmcs_release(zm_mmcs_t *L) {
     zm_atomic_store(&((zm_mcs_qnode_t*)zm_atomic_load(&I->next, zm_memord_acquire))->status, ZM_UNLOCKED, zm_memord_release);
     return 0;
 }
+
+int zm_mmcs_nowaiters(zm_mmcs_t *L) {
+    zm_mcs_qnode_t *I = L->cur_ctx;
+    return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
+}
