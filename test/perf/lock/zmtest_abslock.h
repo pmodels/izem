@@ -21,15 +21,15 @@
 #define zm_abslock_init                                 zm_mcs_init
 #define zm_abslock_acquire(global_lock, local_context)  zm_mcs_acquire(global_lock, local_context)
 #define zm_abslock_release(global_lock, local_context)  zm_mcs_release(global_lock, local_context)
-#elif defined(ZMTEST_USE_CSVMCS)
-#include <lock/zm_csvmcs.h>
+#elif defined(ZMTEST_USE_MMCS)
+#include <lock/zm_mmcs.h>
 /* types */
-#define zm_abslock_t            zm_csvmcs_t
+#define zm_abslock_t            zm_mmcs_t
 #define zm_abslock_localctx_t   zm_mcs_qnode_t
 /* routines */
-#define zm_abslock_init                                 zm_csvmcs_init
-#define zm_abslock_acquire(global_lock, local_context)  zm_csvmcs_acquire(global_lock, local_context)
-#define zm_abslock_release(global_lock, local_context)  zm_csvmcs_release(global_lock)
+#define zm_abslock_init                                 zm_mmcs_init
+#define zm_abslock_acquire(global_lock, local_context)  zm_mmcs_acquire(global_lock, local_context)
+#define zm_abslock_release(global_lock, local_context)  zm_mmcs_release(global_lock)
 #elif defined(ZMTEST_USE_TLP)
 #include <lock/zm_tlp.h>
 /* types */
