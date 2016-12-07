@@ -334,6 +334,13 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
             COMMIT_ALL_WRITES();
             HMCSLock<level>::ReleaseHelper(L, I);
         }
+
+        inline __attribute__((always_inline)) static bool NoWaiters(HNode * L, QNode *I) {
+            if(I->next != NULL)
+                return false;
+            else
+                return HMCSLock<level - 1>::NoWaiters(L->parent, &(L->node));
+        }
     };
 
     template <>
@@ -369,6 +376,10 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
         inline __attribute__((always_inline)) static void Release(HNode * L, QNode *I) {
             COMMIT_ALL_WRITES();
             HMCSLock<1>::ReleaseHelper(L, I);
+        }
+
+        inline __attribute__((always_inline)) static bool NoWaiters(HNode * L, QNode *I) {
+            return (I->next == NULL);
         }
     };
 
@@ -426,6 +437,17 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
                 case 3:  HMCSLock<3>::Release(curNode, &I); break;
                 case 4:  HMCSLock<4>::Release(curNode, &I); break;
                 case 5:  HMCSLock<5>::Release(curNode, &I); break;
+                default: assert(0 && "NYI");
+            }
+        }
+
+        inline __attribute__((always_inline)) __attribute__((flatten)) bool NoWaiters(){
+            switch(curDepth){
+                case 1:  return HMCSLock<1>::NoWaiters(curNode, &I);
+                case 2:  return HMCSLock<2>::NoWaiters(curNode, &I);
+                case 3:  return HMCSLock<3>::NoWaiters(curNode, &I);
+                case 4:  return HMCSLock<4>::NoWaiters(curNode, &I);
+                case 5:  return HMCSLock<5>::NoWaiters(curNode, &I);
                 default: assert(0 && "NYI");
             }
         }
@@ -516,6 +538,10 @@ struct IzemHMCSLock{
     inline __attribute__((always_inline)) __attribute__((flatten)) void Release(){
         leafNodes[tid]->Release();
     }
+
+    inline __attribute__((always_inline)) __attribute__((flatten)) bool NoWaiters(){
+        return leafNodes[tid]->NoWaiters();
+    }
 };
 
 
@@ -542,5 +568,7 @@ extern "C" {
         ((struct IzemHMCSLock*)L)->Release();
         return 0;
     }
-
+    int zm_hmcs_nowaiters(zm_hmcs_t L){
+        return (int) ((struct IzemHMCSLock*)L)->NoWaiters();
+    }
 }
