@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <omp.h>
 #include <assert.h>
-#include "lock/zm_tlp.h"
+#include "zmtest_abslock.h"
 
 #define TEST_NITER 100000
 
@@ -17,8 +17,8 @@ static void test_thruput()
 {
     unsigned nthreads = omp_get_max_threads();
 
-    zm_tlp_t lock;
-    zm_tlp_init(&lock);
+    zm_abslock_t lock;
+    zm_abslock_init(&lock);
     int cur_nthreads = 0;
     printf("#Thread \t HP:Thruput[acqs/s] \t LP Thruput[acqs/s]\n");
     for(cur_nthreads=1; cur_nthreads <= nthreads; cur_nthreads++) {
@@ -28,21 +28,21 @@ static void test_thruput()
     {
         int tid = omp_get_thread_num();
         int iter;
+        zm_abslock_localctx_t ctxt;
         start_times[tid] = omp_get_wtime();
         for(iter=0; iter<TEST_NITER; iter++){
             int err;
             if(tid % 2 == 0)
-                zm_tlp_acquire(&lock);
+                zm_abslock_acquire(&lock, &ctxt);
             else
-               zm_tlp_acquire_low(&lock);
+                zm_abslock_acquire_low(&lock, &ctxt);
 
             /* Computation */
 
             for(int i = 0; i < 10; i++)
                  cache_lines[indices[i]] += cache_lines[indices[9-i]];
 
-
-            zm_tlp_release(&lock);
+            zm_abslock_release(&lock, &ctxt);
         }
         stop_times[tid] = omp_get_wtime();
     } /* End of omp parallel*/
