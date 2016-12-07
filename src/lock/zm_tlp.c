@@ -53,7 +53,7 @@ unlock(low_p)
 #endif
 
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
-#define zm_tlp_acquire_high_p(L) zm_ticket_acquire(&L->high_p)
+#define zm_tlp_acquire_high_p(L, local_ctxt) zm_ticket_acquire(&L->high_p)
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
 #define zm_tlp_acquire_high_p(L, local_ctxt) zm_mmcs_acquire(&L->high_p, local_ctxt)
 #elif (ZM_TLP_HIGH_P == ZM_HMCS)
@@ -77,7 +77,7 @@ unlock(low_p)
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
-#define zm_tlp_acquire_low_p(L) zm_ticket_acquire(&L->low_p)
+#define zm_tlp_acquire_low_p(L, local_ctxt) zm_ticket_acquire(&L->low_p)
 #elif (ZM_TLP_LOW_P == ZM_MCS)
 #define zm_tlp_acquire_low_p(L, local_ctxt) zm_mmcs_acquire(&L->low_p, local_ctxt)
 #elif (ZM_TLP_LOW_P == ZM_HMCS)
