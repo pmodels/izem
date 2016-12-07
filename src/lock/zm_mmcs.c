@@ -4,16 +4,16 @@
  */
 
 #include <stdlib.h>
-#include "lock/zm_csvmcs.h"
+#include "lock/zm_mmcs.h"
 
-int zm_csvmcs_init(zm_csvmcs_t *L)
+int zm_mmcs_init(zm_mmcs_t *L)
 {
     zm_atomic_store(&L->lock, ZM_NULL, zm_memord_release);
     L->cur_ctx = (zm_mcs_qnode_t*)ZM_NULL;
     return 0;
 }
 
-int zm_csvmcs_acquire(zm_csvmcs_t *L, zm_mcs_qnode_t* I) {
+int zm_mmcs_acquire(zm_mmcs_t *L, zm_mcs_qnode_t* I) {
     if((zm_ptr_t)I == ZM_NULL)
         I = L->cur_ctx;
     zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
@@ -29,7 +29,7 @@ int zm_csvmcs_acquire(zm_csvmcs_t *L, zm_mcs_qnode_t* I) {
 }
 
 /* Release the lock */
-int zm_csvmcs_release(zm_csvmcs_t *L) {
+int zm_mmcs_release(zm_mmcs_t *L) {
     zm_mcs_qnode_t* I = L->cur_ctx; /* get current local context */
     L->cur_ctx = (zm_mcs_qnode_t*)ZM_NULL;
     if (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL) {
