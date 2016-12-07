@@ -4,6 +4,7 @@
 #
 
 TESTS = \
+	thread_scale \
 	thread_scale_tlp \
 	thread_scale_mcsp
 
@@ -12,11 +13,14 @@ noinst_PROGRAMS = $(TESTS)
 
 include $(top_srcdir)/test/Makefile.mk
 
+thread_scale_SOURCES = thread_scale.c
 thread_scale_tlp_SOURCES = thread_scale_tlp.c
 thread_scale_mcsp_SOURCES = thread_scale_tlp.c
 
+thread_scale_CFLAGS = -DZMTEST_USE_TLP -fopenmp
 thread_scale_tlp_CFLAGS = -DZMTEST_USE_TLP -fopenmp
 thread_scale_mcsp_CFLAGS = -DZMTEST_USE_MCSP -fopenmp
 
+thread_scale_LDFLAGS = -fopenmp
 thread_scale_tlp_LDFLAGS = -fopenmp
 thread_scale_mcsp_LDFLAGS = -fopenmp
