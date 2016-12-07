@@ -141,9 +141,14 @@ AC_TRY_LINK(
   [], [#include <stdatomic.h>
        atomic_char l;
        atomic_long v;
+       atomic_intptr_t p;
        atomic_flag_test_and_set_explicit(&l, memory_order_relaxed);
        atomic_store_explicit(&v, 1, memory_order_release);
-       atomic_load_explicit(&v, memory_order_acquire);],
+       atomic_load_explicit(&v, memory_order_acquire);
+       atomic_store_explicit(&p, NULL, memory_order_release);
+       intptr_t q = NULL;
+       atomic_compare_exchange_weak_explicit(&p, &q, &l, memory_order_acq_rel, memory_order_acquire);
+],
   [have_c11_atomics=yes],
 )
 if test "x$have_c11_atomics" = "xyes"; then
