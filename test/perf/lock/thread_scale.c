@@ -10,8 +10,16 @@
 #define TEST_NITER (1<<22)
 #define WARMUP_ITER 128
 
-char cache_lines[640] = {0};
+#define CACHELINE_SZ 64
+#define ARRAY_LEN 4
+
+char cache_lines[CACHELINE_SZ*ARRAY_LEN] = {0};
+
+#if ARRAY_LEN == 10
 int indices [] = {3,6,1,7,0,2,9,4,8,5};
+#elif ARRAY_LEN == 4
+int indices [] = {2,1,3,0};
+#endif
 
 static void test_thruput()
 {
@@ -35,8 +43,8 @@ static void test_thruput()
             for(int iter=0; iter < WARMUP_ITER; iter++) {
                 zm_lock_acquire(&lock, &ctxt);
                 /* Computation */
-                for(int i = 0; i < 10; i++)
-                     cache_lines[indices[i]] += cache_lines[indices[9-i]];
+                for(int i = 0; i < ARRAY_LEN; i++)
+                     cache_lines[indices[i]] += cache_lines[indices[ARRAY_LEN-1-i]];
                 zm_lock_release(&lock, &ctxt);
             }
             #pragma omp barrier
@@ -48,8 +56,8 @@ static void test_thruput()
             for(int iter = 0; iter < TEST_NITER; iter++) {
                 zm_lock_acquire(&lock, &ctxt);
                 /* Computation */
-                for(int i = 0; i < 10; i++)
-                     cache_lines[indices[i]] += cache_lines[indices[9-i]];
+                for(int i = 0; i < ARRAY_LEN; i++)
+                     cache_lines[indices[i]] += cache_lines[indices[ARRAY_LEN-1-i]];
                 zm_lock_release(&lock, &ctxt);
             }
         }
