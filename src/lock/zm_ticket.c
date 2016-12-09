@@ -28,6 +28,6 @@ int zm_ticket_release(zm_ticket_t* lock) {
 }
 
 int zm_ticket_nowaiters(zm_ticket_t* lock) {
-    return (zm_atomic_load(&lock->now_serving, zm_memord_acquire) -
-            zm_atomic_load(&lock->next_ticket, zm_memord_acquire) <= 1);
+    return (zm_atomic_load(&lock->next_ticket, zm_memord_acquire) -
+            zm_atomic_load(&lock->now_serving, zm_memord_acquire) == 1);
 }
