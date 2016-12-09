@@ -7,9 +7,9 @@
 #define _ZM_HMCS_H
 #include "lock/zm_lock_types.h"
 
-int zm_hmcs_init(zm_hmcs_t * handle);
-int zm_hmcs_acquire(zm_hmcs_t L);
-int zm_hmcs_release(zm_hmcs_t L);
-int zm_hmcs_nowaiters(zm_hmcs_t L);
+int zm_hmcs_init(zm_hmcs_t *);
+int zm_hmcs_acquire(zm_hmcs_t);
+int zm_hmcs_release(zm_hmcs_t);
+int zm_hmcs_nowaiters(zm_hmcs_t);
 
 #endif /* _ZM_HMCS_H */
