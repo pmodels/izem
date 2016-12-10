@@ -3,7 +3,16 @@
 
 /* an abstraction layer for queue types and routines */
 
-#if defined(ZMTEST_USE_TICKET)
+#if defined(ZMTEST_USE_MTX)
+#include <pthread.h>
+/* types */
+#define zm_abslock_t            pthread_mutex_t
+#define zm_abslock_localctx_t   int /*dummy*/
+/* routines */
+#define zm_abslock_init(global_lock)                    pthread_mutex_init(global_lock, NULL)
+#define zm_abslock_acquire(global_lock, local_context)  pthread_mutex_lock(global_lock)
+#define zm_abslock_release(global_lock, local_context)  pthread_mutex_unlock(global_lock)
+#elif defined(ZMTEST_USE_TICKET)
 #include <lock/zm_ticket.h>
 /* types */
 #define zm_abslock_t            zm_ticket_t
