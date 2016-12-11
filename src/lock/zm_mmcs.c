@@ -29,8 +29,9 @@ int zm_mmcs_acquire(zm_mmcs_t *L, zm_mcs_qnode_t* I) {
 }
 
 /* Release the lock */
-int zm_mmcs_release(zm_mmcs_t *L) {
+int zm_mmcs_release(zm_mmcs_t *L, zm_mcs_qnode_t** ctxt) {
     zm_mcs_qnode_t* I = L->cur_ctx; /* get current local context */
+    *ctxt = I; /* return previous context*/
     L->cur_ctx = (zm_mcs_qnode_t*)ZM_NULL;
     if (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL) {
         zm_mcs_qnode_t *tmp = I;
