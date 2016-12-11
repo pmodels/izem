@@ -29,7 +29,7 @@ static void test_thruput()
     zm_abslock_init(&lock);
     int cur_nthreads;
     /* Throughput = lock acquisitions per second */
-    printf("nthreads,thruput\n");
+    printf("nthreads,thruput,lat\n");
     for(cur_nthreads=2; cur_nthreads <= nthreads; cur_nthreads+=2) {
         double start_time, stop_time;
         #pragma omp parallel num_threads(cur_nthreads)
@@ -64,7 +64,8 @@ static void test_thruput()
         stop_time = omp_get_wtime();
         double elapsed_time = stop_time - start_time;
         double thruput = (double)TEST_NITER/elapsed_time;
-        printf("%d,%.2lf\n", cur_nthreads, thruput);
+        double latency = elapsed_time*1e9/TEST_NITER; // latency in nanoseconds
+        printf("%d,%.2lf,%.2lf\n", cur_nthreads, thruput, latency);
     }
 
 }
