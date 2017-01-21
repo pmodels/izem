@@ -407,14 +407,12 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
         }
         
         inline __attribute__((always_inline)) __attribute__((flatten)) void Acquire(){
-#if 0
             if(curNode->lock == NULL && rootNode->lock == NULL) {
                 // go FP
                 tookFP = true;
                 HMCSLock<1>::Acquire(rootNode, &I);
                 return;
             }
-#endif
             switch(curDepth){
                 case 1:  HMCSLock<1>::Acquire(curNode, &I); break;
                 case 2:  HMCSLock<2>::Acquire(curNode, &I); break;
@@ -428,13 +426,11 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
         
         inline __attribute__((always_inline)) __attribute__((flatten)) void Release(){
             //myRelease(curNode, I);
-#if 0
             if(tookFP) {
                 HMCSLock<1>::Release(rootNode, &I);
                 tookFP = false;
                 return;
             }
-#endif
             switch(curDepth){
                 case 1:  HMCSLock<1>::Release(curNode, &I); break;
                 case 2:  HMCSLock<2>::Release(curNode, &I); break;
