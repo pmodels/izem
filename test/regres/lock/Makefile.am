@@ -32,5 +32,5 @@ cs_thruput_hmcs_CFLAGS = -DZMTEST_USE_HMCS -D_GNU_SOURCE
 cs_thruput_tkt_LDFLAGS = -pthread
 cs_thruput_mcs_LDFLAGS = -pthread
 cs_thruput_mmcs_LDFLAGS = -pthread
-cs_thruput_tlp_LDFLAGS = -pthread
-cs_thruput_hmcs_LDFLAGS = -pthread
+cs_thruput_tlp_LDFLAGS = -pthread -lstdc++
+cs_thruput_hmcs_LDFLAGS = -pthread -lstdc++
