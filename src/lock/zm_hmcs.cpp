@@ -442,6 +442,10 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
         }
 
         inline __attribute__((always_inline)) __attribute__((flatten)) bool NoWaiters(){
+            if(tookFP) {
+                return HMCSLock<1>::NoWaiters(curNode, &I);
+            }
+
             switch(curDepth){
                 case 1:  return HMCSLock<1>::NoWaiters(curNode, &I);
                 case 2:  return HMCSLock<2>::NoWaiters(curNode, &I);
