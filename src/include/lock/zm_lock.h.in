@@ -61,7 +61,7 @@
 #define zm_lock_init                zm_mmcs_init
 #define zm_lock_acquire(L, ctxt)    zm_mmcs_acquire(L, ctxt)
 #define zm_lock_acquire_l(L, ctxt)  zm_mmcs_acquire(L, ctxt)
-#define zm_lock_release(L, ctxt)    zm_mmcs_release(L)
+#define zm_lock_release(L, ctxt)    zm_mmcs_release(L, ctxt)
 
 #elif ZM_LOCK_IF == ZM_TLP_IF
 
@@ -73,7 +73,7 @@
 #define zm_lock_init                zm_tlp_init
 #define zm_lock_acquire(L, ctxt)    zm_tlp_acquire(L, ctxt)
 #define zm_lock_acquire_l(L, ctxt)  zm_tlp_acquire_low(L, ctxt)
-#define zm_lock_release(L, ctxt)    zm_tlp_release(L)
+#define zm_lock_release(L, ctxt)    zm_tlp_release(L, ctxt)
 
 #elif ZM_LOCK_IF == ZM_MCSP_IF
 

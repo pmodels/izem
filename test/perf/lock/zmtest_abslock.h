@@ -38,7 +38,7 @@
 /* routines */
 #define zm_abslock_init                                 zm_mmcs_init
 #define zm_abslock_acquire(global_lock, local_context)  zm_mmcs_acquire(global_lock, local_context)
-#define zm_abslock_release(global_lock, local_context)  zm_mmcs_release(global_lock)
+#define zm_abslock_release(global_lock, local_context)  zm_mmcs_release(global_lock, local_context)
 #elif defined(ZMTEST_USE_TLP)
 #include <lock/zm_tlp.h>
 /* types */
@@ -48,7 +48,7 @@
 #define zm_abslock_init                                 zm_tlp_init
 #define zm_abslock_acquire(global_lock, local_context)  zm_tlp_acquire(global_lock, local_context)
 #define zm_abslock_acquire_low(global_lock, local_context)  zm_tlp_acquire_low(global_lock, local_context)
-#define zm_abslock_release(global_lock, local_context)  zm_tlp_release(global_lock)
+#define zm_abslock_release(global_lock, local_context)  zm_tlp_release(global_lock, local_context)
 #elif defined(ZMTEST_USE_MCSP)
 #include <lock/zm_mcsp.h>
 /* types */
