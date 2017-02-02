@@ -224,6 +224,7 @@ AC_ARG_WITH([tlp_locks],
                           tkt-mcs  - HIGH is ticket LOW is MCS
                           mcs-tkt  - HIGH is MCS LOW is ticket
                           hmcs-hmcs  - both are HMCS locks
+                          hmcs-mcs   - HIGH is HMCS and LOW is MCS
 ],,
 [with_tlp_locks=tkt-tkt])
 
@@ -247,6 +248,11 @@ case "$with_tlp_locks" in
     hmcs-hmcs)
         ZM_TLP_HIGH_P=ZM_HMCS
         ZM_TLP_LOW_P=ZM_HMCS
+    ;;
+    hmcs-mcs)
+        ZM_TLP_HIGH_P=ZM_HMCS
+        ZM_TLP_LOW_P=ZM_MCS
+
     ;;
     *)
         AC_MSG_WARN([Unknown value $with_tlp_locks for with-tlp-locks])
