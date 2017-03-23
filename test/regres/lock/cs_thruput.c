@@ -11,9 +11,10 @@
 #define TEST_NITER 1000
 
 static void* run(void *arg) {
+     int iter
      zm_abslock_t *lock = (zm_abslock_t*) arg;
      zm_abslock_localctx_t my_ctx __attribute__ ((unused));
-     for(int iter=0; iter<TEST_NITER; iter++) {
+     for(iter=0; iter<TEST_NITER; iter++) {
          int err =  zm_abslock_acquire(lock, &my_ctx);
          if(err==0)  /* Lock successfully acquired */
             zm_abslock_release(lock, &my_ctx);   /* Release the lock */
@@ -41,7 +42,8 @@ static void test_lock_thruput() {
     zm_abslock_t lock;
     zm_abslock_init(&lock);
 
-    for (int th=0; th<TEST_NTHREADS; th++) {
+    int th;
+    for (th=0; th<TEST_NTHREADS; th++) {
         pthread_attr_t attr;
         pthread_attr_init(&attr);
         cpu_set_t cpuset;
@@ -50,7 +52,7 @@ static void test_lock_thruput() {
         pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
         pthread_create(&threads[th], &attr, run, (void*) &lock);
     }
-    for (int th=0; th<TEST_NTHREADS; th++)
+    for (th=0; th<TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
 
     printf("Pass\n");

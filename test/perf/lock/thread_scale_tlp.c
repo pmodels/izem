@@ -24,8 +24,9 @@ static void test_thruput()
     #pragma omp parallel num_threads(cur_nthreads)
     {
         int tid = omp_get_thread_num();
+        int iter;
         start_times[tid] = omp_get_wtime();
-        for(int iter=0; iter<TEST_NITER; iter++){
+        for(iter=0; iter<TEST_NITER; iter++){
             int err;
             if(tid % 2 == 0)
                 zm_tlp_acquire(&lock);
@@ -37,7 +38,8 @@ static void test_thruput()
         stop_times[tid] = omp_get_wtime();
     } /* End of omp parallel*/
         double htimes = 0.0, ltimes = 0.0;
-        for(int i=0; i < cur_nthreads; i++) {
+        int i;
+        for(i=0; i < cur_nthreads; i++) {
             if (i % 2 == 0) htimes += (stop_times[i] - start_times[i]);
             else            ltimes += (stop_times[i] - start_times[i]);
         }

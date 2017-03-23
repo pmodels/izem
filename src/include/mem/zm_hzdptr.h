@@ -34,6 +34,7 @@ extern zm_atomic_uint_t zm_hplist_length; /* N: correlates with the number
 extern zm_thread_local zm_hzdptr_lnode_t* zm_my_hplnode;
 
 static inline void zm_hzdptr_allocate() {
+    int i;
     zm_hzdptr_lnode_t *cur_hplnode = (zm_hzdptr_lnode_t*) zm_atomic_load(&zm_hzdptr_list, zm_memord_acquire);
     zm_ptr_t old_hplhead;
     while ((zm_ptr_t)cur_hplnode != ZM_NULL) {
@@ -58,18 +59,19 @@ static inline void zm_hzdptr_allocate() {
                                              zm_memord_release,
                                              zm_memord_acquire));
     zm_my_hplnode = cur_hplnode;
-    for(int i=0; i<ZM_HZDPTR_NUM; i++)
+    for(i=0; i<ZM_HZDPTR_NUM; i++)
         zm_my_hplnode->hzdptrs[i] = ZM_NULL;
     zm_sdlist_init(&zm_my_hplnode->rlist);
 }
 
 static inline void zm_hzdptr_scan() {
+    int i;
     zm_sdlist_t plist;
     /* stage 1: pull non-null values from hzdptr_list */
     zm_sdlist_init(&plist);
     zm_hzdptr_lnode_t *cur_hplnode = (zm_hzdptr_lnode_t*) zm_atomic_load(&zm_hzdptr_list, zm_memord_acquire);;
     while((zm_ptr_t)cur_hplnode != ZM_NULL) {
-        for(int i=0; i<ZM_HZDPTR_NUM; i++) {
+        for(i=0; i<ZM_HZDPTR_NUM; i++) {
             if(cur_hplnode->hzdptrs[i] != ZM_NULL)
                 zm_sdlist_push_back(&plist, (void*)cur_hplnode->hzdptrs[i]);
         }
