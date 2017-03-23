@@ -43,8 +43,9 @@ static void* func(void *arg) {
     producer_b = (tid == 0);
 #endif
 
+    int elem;
     if(producer_b) { /* producer */
-        for(int elem=0; elem < nelem_enq; elem++) {
+        for(elem=0; elem < nelem_enq; elem++) {
 #if defined(ZMTEST_ALLOC_QELEM)
             input = malloc(sizeof *input);
             *input = 1;
@@ -90,12 +91,13 @@ static void run() {
 
     zm_atomic_store(&test_counter, 0, zm_memord_release);
 
-    for (int th=0; th < TEST_NTHREADS; th++) {
+    int th;
+    for (th=0; th < TEST_NTHREADS; th++) {
         data[th].tid = th;
         data[th].queue = &queue;
         pthread_create(&threads[th], NULL, func, (void*) &data[th]);
     }
-    for (int th=0; th < TEST_NTHREADS; th++)
+    for (th=0; th < TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
 
 #if   defined(ZMTEST_MPMC)

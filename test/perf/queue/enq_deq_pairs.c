@@ -25,8 +25,10 @@ static inline void run() {
 
     printf("#threads \t throughput ops/s\n");
 
-    for ( int nthreads = 2; nthreads <= max_threads; nthreads += 2) {
-        for(int i=0; i< nthreads/2; i++)
+    int nthreads
+    for (nthreads = 2; nthreads <= max_threads; nthreads += 2) {
+        int i;
+        for(i=0; i< nthreads/2; i++)
             zm_absqueue_init(&queues[i]);
         int nelem_enq, nelem_deq;
 
@@ -49,8 +51,9 @@ static inline void run() {
             qidx = tid/2;
     
             unsigned deq_count = 0;
+            int elem;
             if(producer_b) { /* producer */
-                for(int elem=0; elem < nelem_enq; elem++) {
+                for(elem=0; elem < nelem_enq; elem++) {
         #if defined(ZMTEST_ALLOC_QELEM)
                     input = malloc(sizeof *input);
                     *input = 1;

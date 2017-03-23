@@ -10,10 +10,11 @@
  */
 
 static inline zm_faseg_t *zm_faseg_alloc(zm_ulong_t seg_id) {
+    int i;
     zm_faseg_t *seg = malloc (sizeof(zm_faseg_t));
     seg->id = seg_id;
     zm_atomic_store(&seg->next, ZM_NULL, zm_memord_release);
-    for(int i = 0; i < ZM_MAX_FASEG_SIZE; i++)
+    for(i = 0; i < ZM_MAX_FASEG_SIZE; i++)
         seg->cells[i].data = ZM_FAQUEUE_ALPHA;
     return seg;
 }
@@ -38,10 +39,11 @@ static inline zm_faseg_t *zm_faseg_advance(zm_faseg_t *seg, zm_ulong_t seg_id){
 
 /* Search, and allocate a segment if necessary, the cell that cell_id belongs to*/
 static inline zm_facell_t *zm_facell_find(zm_faseg_t **seg, zm_ulong_t cell_id) {
+    zm_ulong_t i;
     zm_faseg_t *cur_seg = *seg;
     zm_ulong_t trg_seg = cell_id/ZM_MAX_FASEG_SIZE;
 
-    for (zm_ulong_t i = cur_seg->id; i < trg_seg; i++)
+    for (i = cur_seg->id; i < trg_seg; i++)
         cur_seg = zm_faseg_advance (cur_seg, i + 1);
 
     *seg = cur_seg;
