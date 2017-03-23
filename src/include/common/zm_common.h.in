@@ -10,6 +10,9 @@
 
 #if defined(__x86_64__)
 #define ZM_CACHELINE_SIZE 64
+#elif defined(__bgq__)
+/* BGQ line sizes: L1=64B, L2=128B. Use 128 to be safe */
+#define ZM_CACHELINE_SIZE 128
 #else
 #error "Check your CPU architecture and set the appropriate macros in util.h"
 #endif
