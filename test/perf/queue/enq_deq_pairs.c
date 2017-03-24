@@ -25,7 +25,7 @@ static inline void run() {
 
     printf("#threads \t throughput ops/s\n");
 
-    int nthreads
+    int nthreads;
     for (nthreads = 2; nthreads <= max_threads; nthreads += 2) {
         int i;
         for(i=0; i< nthreads/2; i++)

@@ -14,15 +14,16 @@ char cache_lines[640] = {0};
 int indices [] = {3,6,1,7,0,2,9,4,8,5};
 
 static void* run(void *arg) {
-     int iter
+     int iter;
      zm_abslock_t *lock = (zm_abslock_t*) arg;
-     zm_abslock_localctx_t my_ctx __attribute__ ((unused));
+     zm_abslock_localctx_t* my_ctx __attribute__ ((unused));
+     my_ctx = (zm_abslock_localctx_t*) malloc (sizeof(zm_abslock_localctx_t));
      for(iter=0; iter<TEST_NITER; iter++) {
-         int err =  zm_abslock_acquire(lock, &my_ctx);
+         int err =  zm_abslock_acquire(lock, my_ctx);
          if(err==0) {  /* Lock successfully acquired */
             for(int i = 0; i < 10; i++)
                  cache_lines[indices[i]] += cache_lines[indices[9-i]];
-             zm_abslock_release(lock, &my_ctx);   /* Release the lock */
+             zm_abslock_release(lock, my_ctx);   /* Release the lock */
          } else {
             fprintf(stderr, "Error: couldn't acquire the lock\n");
             exit(1);
