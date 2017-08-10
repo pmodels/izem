@@ -11,7 +11,7 @@
 #define WARMUP_ITER 128
 
 #define CACHELINE_SZ 64
-#define ARRAY_LEN 4
+#define ARRAY_LEN 10
 
 char cache_lines[CACHELINE_SZ*ARRAY_LEN] = {0};
 
@@ -30,14 +30,12 @@ static void test_thruput()
     int cur_nthreads;
     /* Throughput = lock acquisitions per second */
     printf("nthreads,thruput,lat\n");
-    for(cur_nthreads=2; cur_nthreads <= nthreads; cur_nthreads+=2) {
+    for(cur_nthreads=1; cur_nthreads <= nthreads; cur_nthreads+= ((cur_nthreads==1) ? 1 : 2)) {
         double start_time, stop_time;
         #pragma omp parallel num_threads(cur_nthreads)
         {
             int tid = omp_get_thread_num();
-    
-            //printf("processing [%d,%d[\n", chunk_start, chunk_end);
-    
+
             zm_abslock_localctx_t ctxt;
             /* Warmup */
             for(int iter=0; iter < WARMUP_ITER; iter++) {
