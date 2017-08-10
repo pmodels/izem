@@ -19,29 +19,11 @@
  * p. 22. ACM, 2016.
  */
 
-
-#include <algorithm>    // std::sort
-#include <vector>    // std::sort
-
-#include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
-#include <omp.h>
 #include <assert.h>
-#include <sys/time.h>
-#include <iostream>
 #include <malloc.h>
 #include <errno.h>
 #include <pthread.h>
-#include <unistd.h>
-#include <signal.h>
-#include <sys/syscall.h>    /* For SYS_xxx definitions */
-#include <time.h>
-#include <unistd.h>
-#if __cplusplus >= 201103L
-#include <atomic>
-#endif
 #include "lock/zm_lock_types.h"
 
 #define DEFAULT_THRESHOLD 256
@@ -50,17 +32,8 @@
 #define  UNLOCKED (true)
 
 #define WAIT (0xffffffffffffffff)
-//#define ACQUIRE_PARENT (0xfffffffffffffffe)
 #define COHORT_START (0x1)
-#define ABORTED (0xeffffffffffffffe)
-#define READY_TO_USE (0xdffffffffffffffd)
-#define MOVED_ON (QNode *)(0xdffffffffffffffd)
 #define ACQUIRE_PARENT (0xcffffffffffffffc)
-#define CANT_WAIT_FOR_NEXT (QNode *)(0x1)
-
-
-
-#define ALARM_TIME (3 * 60)
 
 #if defined(__xlC__) || defined (__xlc__)
 #include<builtins.h>
@@ -85,56 +58,35 @@ static inline bool PPCBoolCompareAndSwap(volatile int64_t * addr, int64_t oldVal
         }
     }
 }
-#define CAS(location, oldValue, newValue) assert(0 && "NYI")
 #define SWAP(location, value) PPCSwap((volatile int64_t *)location, (int64_t)value)
 #define BOOL_CAS(location, oldValue, newValue) PPCBoolCompareAndSwap((volatile int64_t *)location, (int64_t)oldValue, (int64_t)newValue)
-#define ATOMIC_ADD(location, value) __fetch_and_addlp((volatile int64_t *) location, (int64_t) value)
 #define FORCE_INS_ORDERING() __isync()
 #define COMMIT_ALL_WRITES() __lwsync()
-#define GET_TICK(var) __asm__ __volatile__ ("mfspr %0, 268\n\t": "=r" (var): )
 #else
 // ASSUME __GNUC__
-#define CAS(location, oldValue, newValue) __sync_val_compare_and_swap(location, oldValue, newValue)
 #define SWAP(location, value) __sync_lock_test_and_set(location, value)
 #define BOOL_CAS(location, oldValue, newValue) __sync_bool_compare_and_swap(location, oldValue, newValue)
-#define ATOMIC_ADD(location, value) __sync_fetch_and_add((volatile int64_t *) location, (int64_t) value)
 
 #ifdef __PPC__
 #define FORCE_INS_ORDERING() __asm__ __volatile__ (" isync\n\t")
 #define COMMIT_ALL_WRITES() __asm__ __volatile__ (" lwsync\n\t")
-#define GET_TICK(var) __asm__ __volatile__ ("mfspr %0, 268\n\t": "=r" (var): )
 
 #elif defined(__x86_64__)
 #define FORCE_INS_ORDERING() do{}while(0)
 #define COMMIT_ALL_WRITES() do{}while(0)
-#define GET_TICK(var) assert(0 && "NYI")
 #else
 assert( 0 && "unsupported platform");
 #endif
 
 #endif
 
-#define AtomicWrite(loc, value) std::atomic_store_explicit( (volatile std::atomic<uint64_t> *)(loc), (value), std::memory_order_relaxed)
-
-#define AtomicLoad(loc) std::atomic_load_explicit( (const volatile std::atomic<uint64_t> *)(loc), std::memory_order_relaxed)
-
-#define TIME_SPENT(start, end) (end.tv_sec * 1000000 + end.tv_usec - start.tv_sec*1000000 - start.tv_usec)
-
 #ifndef CACHE_LINE_SIZE
 #define CACHE_LINE_SIZE (128)
-#endif
-
-//#define VALIDATE
-#define CHECK_THREAD_AFFINITY
-
-#ifdef VALIDATE
-volatile int var = 0;
 #endif
 
 #define handle_error_en(en, msg) \
 do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
-/* taken from https://computing.llnl.gov/tutorials/pthreads/man/pthread_setaffinity_np.txt */
 void SetAffinity(int tid){
 #ifdef BLACKLIGHT
     return;
@@ -142,11 +94,11 @@ void SetAffinity(int tid){
     int s, j;
     cpu_set_t cpuset;
     pthread_t thread;
-    
+
     thread = pthread_self();
-    
+
     /* Set affinity mask to include CPUs tid */
-    
+
     CPU_ZERO(&cpuset);
     CPU_SET(1*tid, &cpuset);
 
@@ -171,34 +123,12 @@ static inline void checkAffinity(int tid) {
     assert(num_hw_threads==1);
 }
 
-#if defined(__i386__)
-
-static __inline__ unsigned long long rdtsc(void)
-{
-    unsigned long long int x;
-    __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-    return x;
-}
-
-#elif defined(__x86_64__)
-
-static __inline__ unsigned long long rdtsc(void)
-{
-    unsigned hi, lo;
-    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
-    return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
-}
-
-#endif
-
-static inline int64_t GetFastClockTick() {return rdtsc();}
-
     struct QNode{
         struct QNode * volatile next __attribute__((aligned(CACHE_LINE_SIZE)));
         volatile uint64_t status __attribute__((aligned(CACHE_LINE_SIZE)));
         char buf[CACHE_LINE_SIZE-sizeof(uint64_t)-sizeof(struct QNode *)];
         QNode() : status(WAIT), next(NULL) {}
-        
+
         inline __attribute__((always_inline)) void* operator new(size_t size) {
             void *storage = memalign(CACHE_LINE_SIZE, size);
             if(NULL == storage) {
@@ -206,7 +136,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
             }
             return storage;
         }
-        
+
         inline __attribute__((always_inline)) void Reuse(){
             status = WAIT;
             next = NULL;
@@ -220,7 +150,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
         struct HNode * parent __attribute__((aligned(CACHE_LINE_SIZE)));
         struct QNode *  volatile lock __attribute__((aligned(CACHE_LINE_SIZE)));
         struct QNode  node __attribute__((aligned(CACHE_LINE_SIZE)));
-        
+
         inline __attribute__((always_inline)) void* operator new(size_t size) {
             void *storage = memalign(CACHE_LINE_SIZE, size);
             if(NULL == storage) {
@@ -228,7 +158,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
             }
             return storage;
         }
-        
+
         inline __attribute__((always_inline)) bool IsTopLevel() {
             return parent == NULL ? true : false;
         }
@@ -236,19 +166,12 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
         inline __attribute__((always_inline)) uint64_t GetThreshold()const {
             return threshold;
         }
-        
+
         inline __attribute__((always_inline)) void SetThreshold(uint64_t t) {
             threshold = t;
         }
-        
+
     }__attribute__((aligned(CACHE_LINE_SIZE)));
-
-//    int threshold;
-//    int * thresholdAtLevel;
-
-//    inline __attribute__((always_inline)) int GetThresholdAtLevel(int level){
-//        return thresholdAtLevel[level];
-//    }
 
     inline __attribute__((always_inline)) static void NormalMCSReleaseWithValue(HNode * L, QNode *I, uint64_t val){
         QNode * succ = I->next;
@@ -294,17 +217,17 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
                 }
             }
         }
-        
+
         inline __attribute__((always_inline)) static void Acquire(HNode * L, QNode *I) {
             HMCSLock<level>::AcquireHelper(L, I);
             FORCE_INS_ORDERING();
         }
-        
+
         inline __attribute__((always_inline)) static void ReleaseHelper(HNode * L, QNode *I) {
-            
+
             uint64_t curCount = I->status;
             QNode * succ;
-            
+
             // Lower level releases
             if(curCount == L->GetThreshold()) {
                 // NO KNOWN SUCCESSORS / DESCENDENTS
@@ -316,7 +239,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
                 NormalMCSReleaseWithValue(L, I, ACQUIRE_PARENT);
                 return;
             }
-            
+
             succ = I->next;
             // Not reached threshold
             if(succ) {
@@ -329,7 +252,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
             // Tap successor at this level and ask to spin acquire next level lock
             NormalMCSReleaseWithValue(L, I, ACQUIRE_PARENT);
         }
-        
+
         inline __attribute__((always_inline)) static void Release(HNode * L, QNode *I) {
             COMMIT_ALL_WRITES();
             HMCSLock<level>::ReleaseHelper(L, I);
@@ -357,13 +280,13 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
             while(I->status==WAIT);
             return;
         }
-        
-        
+
+
         inline __attribute__((always_inline)) static void Acquire(HNode * L, QNode *I) {
             HMCSLock<1>::AcquireHelper(L, I);
             FORCE_INS_ORDERING();
         }
-        
+
         inline __attribute__((always_inline)) static void ReleaseHelper(HNode * L, QNode *I) {
             // Top level release is usual MCS
             // At the top level MCS we always writr COHORT_START since
@@ -372,7 +295,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
             // 3. Avoids a read from I->status
             NormalMCSReleaseWithValue(L, I, COHORT_START);
         }
-        
+
         inline __attribute__((always_inline)) static void Release(HNode * L, QNode *I) {
             COMMIT_ALL_WRITES();
             HMCSLock<1>::ReleaseHelper(L, I);
@@ -391,7 +314,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
         QNode I;
         int curDepth;
         bool tookFP;
-        
+
         inline __attribute__((always_inline)) void* operator new(size_t size) {
             void *storage = memalign(CACHE_LINE_SIZE, size);
             if(NULL == storage) {
@@ -399,13 +322,13 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
             }
             return storage;
         }
-        
+
         HMCSLockWrapper(HNode * h, int depth) : curNode(h), curDepth(depth), tookFP(false) {
             HNode * tmp;
             for(tmp = curNode; tmp->parent != NULL; tmp = tmp->parent);
             rootNode = tmp;
         }
-        
+
         inline __attribute__((always_inline)) __attribute__((flatten)) void Acquire(){
             if(curNode->lock == NULL && rootNode->lock == NULL) {
                 // go FP
@@ -423,7 +346,7 @@ static inline int64_t GetFastClockTick() {return rdtsc();}
             }
             return;
         }
-        
+
         inline __attribute__((always_inline)) __attribute__((flatten)) void Release(){
             //myRelease(curNode, I);
             if(tookFP) {
@@ -496,16 +419,16 @@ struct IzemHMCSLock{
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
         pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-        
+
         int totalLocksNeeded = 0;
-        
+
         for (int i=0; i < levels; i++) {
             totalLocksNeeded += maxThreads / participantsAtLevel[i] ;
         }
         lockLocations = (HNode**)memalign(CACHE_LINE_SIZE, sizeof(HNode*) * totalLocksNeeded);
         leafNodes = (HMCSLockWrapper**)memalign(CACHE_LINE_SIZE, sizeof(HMCSLockWrapper*) * maxThreads);
-        
-        
+
+
         for(int tid = 0 ; tid < maxThreads; tid ++){
             SetAffinity(threadMappings[tid]);
             // Pin me to hw-thread-id = tid
@@ -524,7 +447,7 @@ struct IzemHMCSLock{
                 }
             }
         }
-        
+
         // setup parents
         for(int tid = 0 ; tid < maxThreads; tid ++){
             SetAffinity(threadMappings[tid]);
@@ -543,7 +466,7 @@ struct IzemHMCSLock{
         // Restore affinity
         pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
     }
-    
+
     inline __attribute__((always_inline)) __attribute__((flatten)) void Acquire(){
         if (zm_unlikely(tid == -1)) {
             tid = sched_getcpu();
@@ -552,7 +475,7 @@ struct IzemHMCSLock{
         }
         leafNodes[tid]->Acquire();
     }
-    
+
     inline __attribute__((always_inline)) __attribute__((flatten)) void Release(){
         leafNodes[tid]->Release();
     }
