@@ -31,54 +31,9 @@
 #define  LOCKED (false)
 #define  UNLOCKED (true)
 
-#define WAIT (0xffffffffffffffff)
+#define WAIT (0xffffffff)
 #define COHORT_START (0x1)
-#define ACQUIRE_PARENT (0xcffffffffffffffc)
-
-#if defined(__xlC__) || defined (__xlc__)
-#include<builtins.h>
-static inline int64_t PPCSwap(volatile int64_t * addr, int64_t value) {
- 	for(;;){
-		const int64_t oldVal = __ldarx(addr);
-		if(__stdcx(addr, value)) {
-            //__isync();
-			return oldVal;
-		}
-	}
-}
-
-static inline bool PPCBoolCompareAndSwap(volatile int64_t * addr, int64_t oldValue, int64_t newValue) {
-    for(;;) {
-        const int64_t val = __ldarx(addr);
-        if (val != oldValue) {
-            return false;
-        }
-        if(__stdcx(addr, newValue)) {
-            return true;
-        }
-    }
-}
-#define SWAP(location, value) PPCSwap((volatile int64_t *)location, (int64_t)value)
-#define BOOL_CAS(location, oldValue, newValue) PPCBoolCompareAndSwap((volatile int64_t *)location, (int64_t)oldValue, (int64_t)newValue)
-#define FORCE_INS_ORDERING() __isync()
-#define COMMIT_ALL_WRITES() __lwsync()
-#else
-// ASSUME __GNUC__
-#define SWAP(location, value) __sync_lock_test_and_set(location, value)
-#define BOOL_CAS(location, oldValue, newValue) __sync_bool_compare_and_swap(location, oldValue, newValue)
-
-#ifdef __PPC__
-#define FORCE_INS_ORDERING() __asm__ __volatile__ (" isync\n\t")
-#define COMMIT_ALL_WRITES() __asm__ __volatile__ (" lwsync\n\t")
-
-#elif defined(__x86_64__)
-#define FORCE_INS_ORDERING() do{}while(0)
-#define COMMIT_ALL_WRITES() do{}while(0)
-#else
-assert( 0 && "unsupported platform");
-#endif
-
-#endif
+#define ACQUIRE_PARENT (0xcffffffc)
 
 #ifndef CACHE_LINE_SIZE
 #define CACHE_LINE_SIZE (128)
@@ -123,35 +78,18 @@ static inline void checkAffinity(int tid) {
     assert(num_hw_threads==1);
 }
 
-    struct QNode{
-        struct QNode * volatile next __attribute__((aligned(CACHE_LINE_SIZE)));
-        volatile uint64_t status __attribute__((aligned(CACHE_LINE_SIZE)));
-        char buf[CACHE_LINE_SIZE-sizeof(uint64_t)-sizeof(struct QNode *)];
-        QNode() : status(WAIT), next(NULL) {}
-
-        inline __attribute__((always_inline)) void* operator new(size_t size) {
-            void *storage = memalign(CACHE_LINE_SIZE, size);
-            if(NULL == storage) {
-                throw "allocation fail : no free memory";
-            }
-            return storage;
-        }
-
-        inline __attribute__((always_inline)) void Reuse(){
-            status = WAIT;
-            next = NULL;
-            // Updates must happen before swap
-            COMMIT_ALL_WRITES();
-        }
-    }__attribute__((aligned(CACHE_LINE_SIZE)));
+static inline void reuse_qnode(zm_mcs_qnode_t *I){
+    zm_atomic_store(&I->status, WAIT, zm_memord_release);
+    zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
+}
 
     struct HNode{
-        int threshold __attribute__((aligned(CACHE_LINE_SIZE)));
+        unsigned threshold __attribute__((aligned(CACHE_LINE_SIZE)));
         struct HNode * parent __attribute__((aligned(CACHE_LINE_SIZE)));
-        struct QNode *  volatile lock __attribute__((aligned(CACHE_LINE_SIZE)));
-        struct QNode  node __attribute__((aligned(CACHE_LINE_SIZE)));
+        zm_mcs_t lock __attribute__((aligned(CACHE_LINE_SIZE)));
+        zm_mcs_qnode_t node __attribute__((aligned(CACHE_LINE_SIZE)));
 
-        inline __attribute__((always_inline)) void* operator new(size_t size) {
+        inline void* operator new(size_t size) {
             void *storage = memalign(CACHE_LINE_SIZE, size);
             if(NULL == storage) {
                 throw "allocation fail : no free memory";
@@ -159,56 +97,63 @@ static inline void checkAffinity(int tid) {
             return storage;
         }
 
-        inline __attribute__((always_inline)) bool IsTopLevel() {
+        inline bool IsTopLevel() {
             return parent == NULL ? true : false;
         }
         /* TODO: Macro or Template this for fast comprison */
-        inline __attribute__((always_inline)) uint64_t GetThreshold()const {
+        inline unsigned GetThreshold()const {
             return threshold;
         }
 
-        inline __attribute__((always_inline)) void SetThreshold(uint64_t t) {
+        inline void SetThreshold(unsigned t) {
             threshold = t;
         }
 
     }__attribute__((aligned(CACHE_LINE_SIZE)));
 
-    inline __attribute__((always_inline)) static void NormalMCSReleaseWithValue(HNode * L, QNode *I, uint64_t val){
-        QNode * succ = I->next;
+    inline static void NormalMCSReleaseWithValue(HNode * L, zm_mcs_qnode_t *I, unsigned val){
+
+        zm_mcs_qnode_t *succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire);
         if(succ) {
-            succ->status = val;
+            zm_atomic_store(&succ->status, val, zm_memord_release);
             return;
         }
-        if (BOOL_CAS(&(L->lock), I, NULL))
+        zm_mcs_qnode_t *tmp = I;
+        if (zm_atomic_compare_exchange_strong(&(L->lock),
+                                              (zm_ptr_t*)&tmp,
+                                               ZM_NULL,
+                                               zm_memord_acq_rel,
+                                               zm_memord_acquire))
             return;
-        while( (succ=I->next) == NULL);
-        succ->status = val;
+        while(succ == NULL)
+            succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire); /* SPIN */
+        zm_atomic_store(&succ->status, val, zm_memord_release);
         return;
     }
 
     template<int level>
     struct HMCSLock{
-        inline __attribute__((always_inline)) static void AcquireHelper(HNode * L, QNode *I) {
+        inline static void AcquireHelper(HNode * L, zm_mcs_qnode_t *I) {
             // Prepare the node for use.
-            I->Reuse();
-            QNode * pred = (QNode *) SWAP(&(L->lock), I);
+            reuse_qnode(I);
+            zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
             if(!pred) {
                 // I am the first one at this level
                 // begining of cohort
-                I->status = COHORT_START;
+                zm_atomic_store(&I->status, COHORT_START, zm_memord_release);
                 // Acquire at next level if not at the top level
                 HMCSLock<level-1>::AcquireHelper(L->parent, &(L->node));
                 return;
             } else {
-                pred->next = I;
+                zm_atomic_store(&pred->next, I, zm_memord_release);
                 for(;;){
-                    uint64_t myStatus = I->status;
+                    unsigned myStatus = zm_atomic_load(&I->status, zm_memord_acquire);
                     if(myStatus < ACQUIRE_PARENT) {
                         return;
                     }
                     if(myStatus == ACQUIRE_PARENT) {
                         // beginning of cohort
-                        I->status = COHORT_START;
+                        zm_atomic_store(&I->status, COHORT_START, zm_memord_release);
                         // This means this level is acquired and we can start the next level
                         HMCSLock<level-1>::AcquireHelper(L->parent, &(L->node));
                         return;
@@ -218,15 +163,15 @@ static inline void checkAffinity(int tid) {
             }
         }
 
-        inline __attribute__((always_inline)) static void Acquire(HNode * L, QNode *I) {
+        inline static void Acquire(HNode * L, zm_mcs_qnode_t *I) {
             HMCSLock<level>::AcquireHelper(L, I);
-            FORCE_INS_ORDERING();
+            //FORCE_INS_ORDERING();
         }
 
-        inline __attribute__((always_inline)) static void ReleaseHelper(HNode * L, QNode *I) {
+        inline static void ReleaseHelper(HNode * L, zm_mcs_qnode_t *I) {
 
-            uint64_t curCount = I->status;
-            QNode * succ;
+            unsigned curCount = zm_atomic_load(&(I->status), zm_memord_acquire) ;
+            zm_mcs_qnode_t * succ;
 
             // Lower level releases
             if(curCount == L->GetThreshold()) {
@@ -234,32 +179,32 @@ static inline void checkAffinity(int tid) {
                 // reached threshold and have next level
                 // release to next level
                 HMCSLock<level - 1>::ReleaseHelper(L->parent, &(L->node));
-                COMMIT_ALL_WRITES();
+                //COMMIT_ALL_WRITES();
                 // Tap successor at this level and ask to spin acquire next level lock
                 NormalMCSReleaseWithValue(L, I, ACQUIRE_PARENT);
                 return;
             }
 
-            succ = I->next;
+            succ = (zm_mcs_qnode_t*)zm_atomic_load(&(I->next), zm_memord_acquire);
             // Not reached threshold
             if(succ) {
-                succ->status = curCount + 1;
+                zm_atomic_store(&succ->status, curCount + 1, zm_memord_release);
                 return; // Released
             }
             // No known successor, so release
             HMCSLock<level - 1>::ReleaseHelper(L->parent, &(L->node));
-            COMMIT_ALL_WRITES();
+            //COMMIT_ALL_WRITES();
             // Tap successor at this level and ask to spin acquire next level lock
             NormalMCSReleaseWithValue(L, I, ACQUIRE_PARENT);
         }
 
-        inline __attribute__((always_inline)) static void Release(HNode * L, QNode *I) {
-            COMMIT_ALL_WRITES();
+        inline static void Release(HNode * L, zm_mcs_qnode_t *I) {
+            //COMMIT_ALL_WRITES();
             HMCSLock<level>::ReleaseHelper(L, I);
         }
 
-        inline __attribute__((always_inline)) static bool NoWaiters(HNode * L, QNode *I) {
-            if(I->next != NULL)
+        inline static bool NoWaiters(HNode * L, zm_mcs_qnode_t *I) {
+            if(zm_atomic_load(&I->next, zm_memord_acquire) != ZM_NULL)
                 return false;
             else
                 return HMCSLock<level - 1>::NoWaiters(L->parent, &(L->node));
@@ -268,26 +213,29 @@ static inline void checkAffinity(int tid) {
 
     template <>
     struct HMCSLock<1> {
-        inline __attribute__((always_inline)) static void AcquireHelper(HNode * L, QNode *I) {
+        inline static void AcquireHelper(HNode * L, zm_mcs_qnode_t *I) {
             // Prepare the node for use.
-            I->Reuse();
-            QNode * pred = (QNode *) SWAP(&(L->lock), I);
+            reuse_qnode(I);
+            zm_mcs_qnode_t *pred = (zm_mcs_qnode_t*) zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
+
             if(!pred) {
                 // I am the first one at this level
                 return;
             }
-            pred->next = I;
-            while(I->status==WAIT);
+
+            zm_atomic_store(&pred->next, I, zm_memord_release);
+            while(zm_atomic_load(&I->status, zm_memord_acquire) == WAIT)
+                ; /* SPIN */
             return;
         }
 
 
-        inline __attribute__((always_inline)) static void Acquire(HNode * L, QNode *I) {
+        inline static void Acquire(HNode * L, zm_mcs_qnode_t *I) {
             HMCSLock<1>::AcquireHelper(L, I);
-            FORCE_INS_ORDERING();
+            //FORCE_INS_ORDERING();
         }
 
-        inline __attribute__((always_inline)) static void ReleaseHelper(HNode * L, QNode *I) {
+        inline static void ReleaseHelper(HNode * L, zm_mcs_qnode_t *I) {
             // Top level release is usual MCS
             // At the top level MCS we always writr COHORT_START since
             // 1. It will release the lock
@@ -296,26 +244,26 @@ static inline void checkAffinity(int tid) {
             NormalMCSReleaseWithValue(L, I, COHORT_START);
         }
 
-        inline __attribute__((always_inline)) static void Release(HNode * L, QNode *I) {
-            COMMIT_ALL_WRITES();
+        inline static void Release(HNode * L, zm_mcs_qnode_t *I) {
+            //COMMIT_ALL_WRITES();
             HMCSLock<1>::ReleaseHelper(L, I);
         }
 
-        inline __attribute__((always_inline)) static bool NoWaiters(HNode * L, QNode *I) {
-            return (I->next == NULL);
+        inline static bool NoWaiters(HNode * L, zm_mcs_qnode_t *I) {
+            return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
         }
     };
 
-    typedef void (*AcquireFP) (HNode *, QNode *);
-    typedef void (*ReleaseFP) (HNode *, QNode *);
+    typedef void (*AcquireFP) (HNode *, zm_mcs_qnode_t *);
+    typedef void (*ReleaseFP) (HNode *, zm_mcs_qnode_t *);
     struct HMCSLockWrapper{
         HNode * curNode;
         HNode * rootNode;
-        QNode I;
+        zm_mcs_qnode_t I;
         int curDepth;
         bool tookFP;
 
-        inline __attribute__((always_inline)) void* operator new(size_t size) {
+        inline void* operator new(size_t size) {
             void *storage = memalign(CACHE_LINE_SIZE, size);
             if(NULL == storage) {
                 throw "allocation fail : no free memory";
@@ -329,7 +277,7 @@ static inline void checkAffinity(int tid) {
             rootNode = tmp;
         }
 
-        inline __attribute__((always_inline)) __attribute__((flatten)) void Acquire(){
+        inline __attribute__((flatten)) void Acquire(){
             if(curNode->lock == NULL && rootNode->lock == NULL) {
                 // go FP
                 tookFP = true;
@@ -347,7 +295,7 @@ static inline void checkAffinity(int tid) {
             return;
         }
 
-        inline __attribute__((always_inline)) __attribute__((flatten)) void Release(){
+        inline __attribute__((flatten)) void Release(){
             //myRelease(curNode, I);
             if(tookFP) {
                 HMCSLock<1>::Release(rootNode, &I);
@@ -364,7 +312,7 @@ static inline void checkAffinity(int tid) {
             }
         }
 
-        inline __attribute__((always_inline)) __attribute__((flatten)) bool NoWaiters(){
+        inline __attribute__((flatten)) bool NoWaiters(){
             if(tookFP) {
                 return HMCSLock<1>::NoWaiters(curNode, &I);
             }
@@ -467,7 +415,7 @@ struct IzemHMCSLock{
         pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
     }
 
-    inline __attribute__((always_inline)) __attribute__((flatten)) void Acquire(){
+    inline __attribute__((flatten)) void Acquire(){
         if (zm_unlikely(tid == -1)) {
             tid = sched_getcpu();
             checkAffinity(tid);
@@ -476,11 +424,11 @@ struct IzemHMCSLock{
         leafNodes[tid]->Acquire();
     }
 
-    inline __attribute__((always_inline)) __attribute__((flatten)) void Release(){
+    inline __attribute__((flatten)) void Release(){
         leafNodes[tid]->Release();
     }
 
-    inline __attribute__((always_inline)) __attribute__((flatten)) bool NoWaiters(){
+    inline __attribute__((flatten)) bool NoWaiters(){
         return leafNodes[tid]->NoWaiters();
     }
 };
