@@ -24,11 +24,11 @@ static inline zm_faseg_t *zm_faseg_advance(zm_faseg_t *seg, zm_ulong_t seg_id){
                                                            zm_memord_acquire);
     if((zm_ptr_t)next == ZM_NULL) {
         zm_faseg_t *tmp_seg = zm_faseg_alloc (seg_id);
-        if (!zm_atomic_compare_exchange_weak(&seg->next,
-                                            (zm_ptr_t*)&next,
-                                            (zm_ptr_t)tmp_seg,
-                                            zm_memord_release,
-                                            zm_memord_acquire))
+        if (!zm_atomic_compare_exchange_strong(&seg->next,
+                                               (zm_ptr_t*)&next,
+                                               (zm_ptr_t)tmp_seg,
+                                               zm_memord_acq_rel,
+                                               zm_memord_acquire))
             free(tmp_seg);
     
         next = (zm_faseg_t*) zm_atomic_load(&seg->next,

@@ -56,7 +56,7 @@ static inline void zm_hzdptr_allocate() {
     } while(!zm_atomic_compare_exchange_weak(&zm_hzdptr_list,
                                              &old_hplhead,
                                              (zm_ptr_t)cur_hplnode,
-                                             zm_memord_release,
+                                             zm_memord_acq_rel,
                                              zm_memord_acquire));
     zm_my_hplnode = cur_hplnode;
     for(i=0; i<ZM_HZDPTR_NUM; i++)

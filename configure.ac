@@ -147,6 +147,7 @@ AC_TRY_LINK(
        atomic_load_explicit(&v, memory_order_acquire);
        atomic_store_explicit(&p, NULL, memory_order_release);
        intptr_t q = NULL;
+       atomic_compare_exchange_strong_explicit(&p, &q, &l, memory_order_acq_rel, memory_order_acquire);
        atomic_compare_exchange_weak_explicit(&p, &q, &l, memory_order_acq_rel, memory_order_acquire);
 ],
   [have_c11_atomics=yes],

@@ -35,11 +35,11 @@ int zm_mmcs_release(zm_mmcs_t *L, zm_mcs_qnode_t** ctxt) {
     L->cur_ctx = (zm_mcs_qnode_t*)ZM_NULL;
     if (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL) {
         zm_mcs_qnode_t *tmp = I;
-        if(zm_atomic_compare_exchange_weak(&L->lock,
-                                          (zm_ptr_t*)&tmp,
-                                          ZM_NULL,
-                                          zm_memord_release,
-                                          zm_memord_acquire))
+        if(zm_atomic_compare_exchange_strong(&L->lock,
+                                             (zm_ptr_t*)&tmp,
+                                             ZM_NULL,
+                                             zm_memord_acq_rel,
+                                             zm_memord_acquire))
             return 0;
         while(zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL)
             ; /* SPIN */
