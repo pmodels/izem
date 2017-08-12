@@ -2,9 +2,12 @@
 /*
  * See COPYRIGHT in top-level directory.
  */
-#include <stdlib.h>
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <omp.h>
+#include <sched.h>
+#include <unistd.h>
+#include <pthread.h>
 #include "zmtest_abslock.h"
 
 #define TEST_NITER (1<<22)
@@ -21,11 +24,30 @@ int indices [] = {3,6,1,7,0,2,9,4,8,5};
 int indices [] = {2,1,3,0};
 #endif
 
+zm_abslock_t lock;
+
+#if defined (ZM_BIND_MANUAL)
+void bind_compact(){
+  int tid = omp_get_thread_num();
+  /* Compute the target core */
+  int tgt_core = tid;
+
+  cpu_set_t set;
+  CPU_ZERO(&set);
+  CPU_SET(tgt_core, &set);
+
+  if (pthread_setaffinity_np(pthread_self(), sizeof(set), &set) < 0) {
+      perror("pthread_setaffinity_np");
+  }
+}
+#else
+#define bind_compact()
+#endif
+
 static void test_thruput()
 {
     unsigned nthreads = omp_get_max_threads();
 
-    zm_abslock_t lock;
     zm_abslock_init(&lock);
     int cur_nthreads;
     /* Throughput = lock acquisitions per second */
@@ -34,6 +56,9 @@ static void test_thruput()
         double start_time, stop_time;
         #pragma omp parallel num_threads(cur_nthreads)
         {
+
+            bind_compact();
+
             int tid = omp_get_thread_num();
 
             zm_abslock_localctx_t ctxt;
