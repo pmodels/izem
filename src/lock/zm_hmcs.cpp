@@ -28,24 +28,14 @@
 
 #define DEFAULT_THRESHOLD 256
 
-#define  LOCKED (false)
-#define  UNLOCKED (true)
-
 #define WAIT (0xffffffff)
 #define COHORT_START (0x1)
 #define ACQUIRE_PARENT (0xcffffffc)
-
-#ifndef CACHE_LINE_SIZE
-#define CACHE_LINE_SIZE (128)
-#endif
 
 #define handle_error_en(en, msg) \
 do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
 void SetAffinity(int tid){
-#ifdef BLACKLIGHT
-    return;
-#endif
     int s, j;
     cpu_set_t cpuset;
     pthread_t thread;
@@ -84,13 +74,13 @@ static inline void reuse_qnode(zm_mcs_qnode_t *I){
 }
 
     struct HNode{
-        unsigned threshold __attribute__((aligned(CACHE_LINE_SIZE)));
-        struct HNode * parent __attribute__((aligned(CACHE_LINE_SIZE)));
-        zm_mcs_t lock __attribute__((aligned(CACHE_LINE_SIZE)));
-        zm_mcs_qnode_t node __attribute__((aligned(CACHE_LINE_SIZE)));
+        unsigned threshold __attribute__((aligned(ZM_CACHELINE_SIZE)));
+        struct HNode * parent __attribute__((aligned(ZM_CACHELINE_SIZE)));
+        zm_mcs_t lock __attribute__((aligned(ZM_CACHELINE_SIZE)));
+        zm_mcs_qnode_t node __attribute__((aligned(ZM_CACHELINE_SIZE)));
 
         inline void* operator new(size_t size) {
-            void *storage = memalign(CACHE_LINE_SIZE, size);
+            void *storage = memalign(ZM_CACHELINE_SIZE, size);
             if(NULL == storage) {
                 throw "allocation fail : no free memory";
             }
@@ -109,7 +99,7 @@ static inline void reuse_qnode(zm_mcs_qnode_t *I){
             threshold = t;
         }
 
-    }__attribute__((aligned(CACHE_LINE_SIZE)));
+    }__attribute__((aligned(ZM_CACHELINE_SIZE)));
 
     inline static void NormalMCSReleaseWithValue(HNode * L, zm_mcs_qnode_t *I, unsigned val){
 
@@ -264,7 +254,7 @@ static inline void reuse_qnode(zm_mcs_qnode_t *I){
         bool tookFP;
 
         inline void* operator new(size_t size) {
-            void *storage = memalign(CACHE_LINE_SIZE, size);
+            void *storage = memalign(ZM_CACHELINE_SIZE, size);
             if(NULL == storage) {
                 throw "allocation fail : no free memory";
             }
@@ -353,8 +343,8 @@ static int threadMappings[] = {0 , 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , 10 , 11 ,
 struct IzemHMCSLock{
     // Assumes tids range from [0.. maxThreads)
     // Assumes that tid 0 is close to tid and so on.
-    HNode ** lockLocations __attribute__((aligned(CACHE_LINE_SIZE)));
-    HMCSLockWrapper ** leafNodes __attribute__((aligned(CACHE_LINE_SIZE)));
+    HNode ** lockLocations __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    HMCSLockWrapper ** leafNodes __attribute__((aligned(ZM_CACHELINE_SIZE)));
     int GetHWThreadId(int id){
        for(int i = 0 ; i < threadMappingMax; i++)
            if(id == threadMappings[i])
@@ -376,8 +366,8 @@ struct IzemHMCSLock{
         for (int i=0; i < levels; i++) {
             totalLocksNeeded += maxThreads / participantsAtLevel[i] ;
         }
-        lockLocations = (HNode**)memalign(CACHE_LINE_SIZE, sizeof(HNode*) * totalLocksNeeded);
-        leafNodes = (HMCSLockWrapper**)memalign(CACHE_LINE_SIZE, sizeof(HMCSLockWrapper*) * maxThreads);
+        lockLocations = (HNode**)memalign(ZM_CACHELINE_SIZE, sizeof(HNode*) * totalLocksNeeded);
+        leafNodes = (HMCSLockWrapper**)memalign(ZM_CACHELINE_SIZE, sizeof(HMCSLockWrapper*) * maxThreads);
 
 
         for(int tid = 0 ; tid < maxThreads; tid ++){
