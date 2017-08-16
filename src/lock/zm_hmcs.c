@@ -170,7 +170,7 @@ static inline void normal_mcs_release_with_value(hnode_t * L, zm_mcs_qnode_t *I,
     return;
 }
 
-inline static void acquire_root(hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void acquire_root(hnode_t * L, zm_mcs_qnode_t *I) {
     // Prepare the node for use.
     reuse_qnode(I);
     zm_mcs_qnode_t *pred = (zm_mcs_qnode_t*) zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
@@ -187,7 +187,7 @@ inline static void acquire_root(hnode_t * L, zm_mcs_qnode_t *I) {
 }
 
 
-inline static void release_root(hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void release_root(hnode_t * L, zm_mcs_qnode_t *I) {
     // Top level release is usual MCS
     // At the top level MCS we always writr COHORT_START since
     // 1. It will release the lock
@@ -196,11 +196,11 @@ inline static void release_root(hnode_t * L, zm_mcs_qnode_t *I) {
     normal_mcs_release_with_value(L, I, COHORT_START);
 }
 
-inline static int no_waiters_root(hnode_t * L, zm_mcs_qnode_t *I) {
+static inline int no_waiters_root(hnode_t * L, zm_mcs_qnode_t *I) {
     return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
 }
 
-inline static void acquire_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void acquire_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
     // Trivial case = root level
     if (level == 1)
         acquire_root(L, I);
@@ -235,12 +235,12 @@ inline static void acquire_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
     }
 }
 
-inline static void acquire(int level, hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void acquire(int level, hnode_t * L, zm_mcs_qnode_t *I) {
     acquire_helper(level, L, I);
     //FORCE_INS_ORDERING();
 }
 
-inline static void release_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void release_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
     // Trivial case = root level
     if (level == 1) {
         release_root(L, I);
@@ -274,12 +274,12 @@ inline static void release_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
     }
 }
 
-inline static void release(int level, hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void release(int level, hnode_t * L, zm_mcs_qnode_t *I) {
     //COMMIT_ALL_WRITES();
     release_helper(level, L, I);
 }
 
-inline static int no_waiters(int level, hnode_t * L, zm_mcs_qnode_t *I) {
+static inline int no_waiters(int level, hnode_t * L, zm_mcs_qnode_t *I) {
     if (level == 1 ) {
         return no_waiters_root(L,I);
     } else {
