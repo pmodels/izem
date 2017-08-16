@@ -32,12 +32,59 @@
 #define COHORT_START (0x1)
 #define ACQUIRE_PARENT (0xcffffffc)
 
+#ifndef TRUE
+#define TRUE 1
+#else
+#error "TRUE already defined"
+#endif
+
+#ifndef FALSE
+#define FALSE 0
+#else
+#error "TRUE already defined"
+#endif
+
 #define handle_error_en(en, msg) \
 do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
 typedef struct HNode HNode_t;
 typedef struct hmcs_leaf hmcs_leaf_t;
 typedef struct hmcs_lock hmcs_lock_t;
+
+static zm_thread_local int tid = -1;
+
+/* TODO: automate hardware topology detection
+ * instead of the below hard-coded method */
+
+#define IT_MACHINE
+//#define THING_MACHINE
+//#define FIRESTONE_MACHINE
+//#define LAPTOP_MACHINE
+
+#if defined(IT_MACHINE)
+static const int maxThreads = 88;
+static const int levels = 3;
+static const int participantsAtLevel[] = {2,22,88};
+static const int threadMappings[] = {0, 44, 1, 45, 2, 46, 3, 47, 4, 48, 5, 49, 6, 50, 7, 51, 8, 52, 9, 53, 10, 54, 11, 55, 12, 56, 13, 57, 14, 58, 15, 59, 16, 60, 17, 61, 18, 62, 19, 63, 20, 64, 21, 65, 22, 66, 23, 67, 24, 68, 25, 69, 26, 70, 27, 71, 28, 72, 29, 73, 30, 74, 31, 75, 32, 76, 33, 77, 34, 78, 35, 79, 36, 80, 37, 81, 38, 82, 39, 83, 40, 84, 41, 85, 42, 86, 43, 87};
+#elif defined(THING_MACHINE)
+static const int maxThreads = 72;
+static const int levels = 3;
+static const int participantsAtLevel[] = {2,18,72};
+static const int threadMappings[] = {0 , 36 , 1 , 37 , 2 , 38 , 3 , 39 , 4 , 40 , 5 , 41 , 6 , 42 , 7 , 43 , 8 , 44 , 9 , 45 , 10 , 46 , 11 , 47 , 12 , 48 , 13 , 49 , 14 , 50 , 15 , 51 , 16 , 52 , 17 , 53 , 18 , 54 , 19 , 55 , 20 , 56 , 21 , 57 , 22 , 58 , 23 , 59 , 24 , 60 , 25 , 61 , 26 , 62 , 27 , 63 , 28 , 64 , 29 , 65 , 30 , 66 , 31 , 67 , 32 , 68 , 33 , 69 , 34 , 70 , 35 , 71};
+#elif defined(FIRESTONE_MACHINE)
+static const int maxThreads = 160;
+static const int levels = 3;
+static const int participantsAtLevel[] = {8,80,160};
+static const int threadMappings[] = {0 , 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , 10 , 11 , 12 , 13 , 14 , 15 , 16 , 17 , 18 , 19 , 20 , 21 , 22 , 23 , 24 , 25 , 26 , 27 , 28 , 29 , 30 , 31 , 32 , 33 , 34 , 35 , 36 , 37 , 38 , 39 , 40 , 41 , 42 , 43 , 44 , 45 , 46 , 47 , 48 , 49 , 50 , 51 , 52 , 53 , 54 , 55 , 56 , 57 , 58 , 59 , 60 , 61 , 62 , 63 , 64 , 65 , 66 , 67 , 68 , 69 , 70 , 71 , 72 , 73 , 74 , 75 , 76 , 77 , 78 , 79 , 80 , 81 , 82 , 83 , 84 , 85 , 86 , 87 , 88 , 89 , 90 , 91 , 92 , 93 , 94 , 95 , 96 , 97 , 98 , 99 , 100 , 101 , 102 , 103 , 104 , 105 , 106 , 107 , 108 , 109 , 110 , 111 , 112 , 113 , 114 , 115 , 116 , 117 , 118 , 119 , 120 , 121 , 122 , 123 , 124 , 125 , 126 , 127 , 128 , 129 , 130 , 131 , 132 , 133 , 134 , 135 , 136 , 137 , 138 , 139 , 140 , 141 , 142 , 143 , 144 , 145 , 146 , 147 , 148 , 149 , 150 , 151 , 152 , 153 , 154 , 155 , 156 , 157 , 158 , 159};
+#elif defined(LAPTOP_MACHINE)
+static const int maxThreads = 4;
+static const int levels = 2;
+static const int participantsAtLevel[] = {2,4};
+static const int threadMappings[] = {0 , 1 , 2 , 3};
+#else
+#error "Machine topology not recognized"
+#endif
+
 
 void SetAffinity(int tid){
     int s, j;
@@ -86,28 +133,26 @@ struct HNode{
 }__attribute__((aligned(ZM_CACHELINE_SIZE)));
 
 
-inline void* hnode_new() {
-    void *storage = memalign(ZM_CACHELINE_SIZE, sizeof(HNode_t);
-    if(NULL == storage) {
-        throw "allocation fail : no free memory";
-    }
+static inline void* hnode_new() {
+    void *storage = memalign(ZM_CACHELINE_SIZE, sizeof(HNode_t));
+    assert(storage != NULL);
     return storage;
 }
 
 /* TODO: delete this in a cleanup commit */
-inline int IsTopLevel(HNode_t *L) {
+static inline int IsTopLevel(HNode_t *L) {
     return L->parent == NULL ? 1 : 0;
 }
 /* TODO: Macro or Template this for fast comprison */
-inline unsigned GetThreshold(HNode_t *L) const {
+static inline unsigned GetThreshold(HNode_t *L) {
     return L->threshold;
 }
 
-inline void SetThreshold(HNode_t *L, unsigned t) {
+static inline void SetThreshold(HNode_t *L, unsigned t) {
     L->threshold = t;
 }
 
-inline static void NormalMCSReleaseWithValue(HNode_t * L, zm_mcs_qnode_t *I, unsigned val){
+static inline void NormalMCSReleaseWithValue(HNode_t * L, zm_mcs_qnode_t *I, unsigned val){
 
     zm_mcs_qnode_t *succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire);
     if(succ) {
@@ -236,7 +281,7 @@ inline static void Release(int level, HNode_t * L, zm_mcs_qnode_t *I) {
     ReleaseHelper(level, L, I);
 }
 
-inline static bool NoWaiters(int level, HNode_t * L, zm_mcs_qnode_t *I) {
+inline static int NoWaiters(int level, HNode_t * L, zm_mcs_qnode_t *I) {
     if (level == 1 ) {
         return NoWaitersRoot(L,I);
     } else {
@@ -248,11 +293,11 @@ inline static bool NoWaiters(int level, HNode_t * L, zm_mcs_qnode_t *I) {
 }
 
 struct hmcs_leaf{
-    HNode * curNode;
-    HNode * rootNode;
+    HNode_t * curNode;
+    HNode_t * rootNode;
     zm_mcs_qnode_t I;
     int curDepth;
-    bool tookFP;
+    int tookFP;
 };
 
 static inline void* hmcs_leaf_new(HNode_t *h, int depth) {
@@ -261,15 +306,16 @@ static inline void* hmcs_leaf_new(HNode_t *h, int depth) {
     leaf->curNode = h;
     leaf->curDepth = depth;
     leaf->tookFP = FALSE;
-    HNode_t * tmp, rootNode;
-    for(tmp = curNode; tmp->parent != NULL; tmp = tmp->parent);
+    HNode_t *tmp, *rootNode;
+    for(tmp = leaf->curNode; tmp->parent != NULL; tmp = tmp->parent);
         rootNode = tmp;
     leaf->rootNode = rootNode;
-    return storage;
+    return leaf;
 }
 
-static inline void hmcs_leaf_Acquire(hmcs_leaf_t *L){
-    if(L->curNode->lock == NULL && L->rootNode->lock == NULL) {
+static inline void hmcs_leaf_acquire(hmcs_leaf_t *L){
+    if((zm_ptr_t)L->curNode->lock == ZM_NULL
+    && (zm_ptr_t)L->rootNode->lock == ZM_NULL) {
         // go FP
         L->tookFP = TRUE;
         AcquireRoot(L->rootNode, &L->I);
@@ -279,62 +325,30 @@ static inline void hmcs_leaf_Acquire(hmcs_leaf_t *L){
     return;
 }
 
-static inline void hmcs_leaf_Release(hmcs_leaf_t *L){
+static inline void hmcs_leaf_release(hmcs_leaf_t *L){
     //myRelease(curNode, I);
     if(L->tookFP) {
         ReleaseRoot(L->rootNode, &L->I);
         L->tookFP = FALSE;
         return;
     }
-    Release(levels, L->curNode, &L->I); break;
+    Release(levels, L->curNode, &L->I);
     return;
 }
 
-static inline bool hmcs_leaf_NoWaiters(hmcs_leaf_t *L){
+static inline int hmcs_leaf_nowaiters(hmcs_leaf_t *L){
     // Shouldnt this be NoWaiters(rootNode, I)?
     if(L->tookFP) {
         return NoWaitersRoot(L->curNode, &L->I);
     }
 
-    return NoWaiters(L->curNode, &L->I);
+    return NoWaiters(levels, L->curNode, &L->I);
 }
 
-static zm_thread_local int tid = -1;
-
-#define IT_MACHINE
-//#define THING_MACHINE
-//#define FIRESTONE_MACHINE
-//#define LAPTOP_MACHINE
-
-#if defined(IT_MACHINE)
-static const int maxThreads = 88;
-static const int levels = 3;
-static const int participantsAtLevel[] = {2,22,88};
-static const int threadMappings[] = {0, 44, 1, 45, 2, 46, 3, 47, 4, 48, 5, 49, 6, 50, 7, 51, 8, 52, 9, 53, 10, 54, 11, 55, 12, 56, 13, 57, 14, 58, 15, 59, 16, 60, 17, 61, 18, 62, 19, 63, 20, 64, 21, 65, 22, 66, 23, 67, 24, 68, 25, 69, 26, 70, 27, 71, 28, 72, 29, 73, 30, 74, 31, 75, 32, 76, 33, 77, 34, 78, 35, 79, 36, 80, 37, 81, 38, 82, 39, 83, 40, 84, 41, 85, 42, 86, 43, 87};
-#elif defined(THING_MACHINE)
-static const int maxThreads = 72;
-static const int levels = 3;
-static const int participantsAtLevel[] = {2,18,72};
-static const int threadMappings[] = {0 , 36 , 1 , 37 , 2 , 38 , 3 , 39 , 4 , 40 , 5 , 41 , 6 , 42 , 7 , 43 , 8 , 44 , 9 , 45 , 10 , 46 , 11 , 47 , 12 , 48 , 13 , 49 , 14 , 50 , 15 , 51 , 16 , 52 , 17 , 53 , 18 , 54 , 19 , 55 , 20 , 56 , 21 , 57 , 22 , 58 , 23 , 59 , 24 , 60 , 25 , 61 , 26 , 62 , 27 , 63 , 28 , 64 , 29 , 65 , 30 , 66 , 31 , 67 , 32 , 68 , 33 , 69 , 34 , 70 , 35 , 71};
-#elif defined(FIRESTONE_MACHINE)
-static const int maxThreads = 160;
-static const int levels = 3;
-static const int participantsAtLevel[] = {8,80,160};
-static const int threadMappings[] = {0 , 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , 10 , 11 , 12 , 13 , 14 , 15 , 16 , 17 , 18 , 19 , 20 , 21 , 22 , 23 , 24 , 25 , 26 , 27 , 28 , 29 , 30 , 31 , 32 , 33 , 34 , 35 , 36 , 37 , 38 , 39 , 40 , 41 , 42 , 43 , 44 , 45 , 46 , 47 , 48 , 49 , 50 , 51 , 52 , 53 , 54 , 55 , 56 , 57 , 58 , 59 , 60 , 61 , 62 , 63 , 64 , 65 , 66 , 67 , 68 , 69 , 70 , 71 , 72 , 73 , 74 , 75 , 76 , 77 , 78 , 79 , 80 , 81 , 82 , 83 , 84 , 85 , 86 , 87 , 88 , 89 , 90 , 91 , 92 , 93 , 94 , 95 , 96 , 97 , 98 , 99 , 100 , 101 , 102 , 103 , 104 , 105 , 106 , 107 , 108 , 109 , 110 , 111 , 112 , 113 , 114 , 115 , 116 , 117 , 118 , 119 , 120 , 121 , 122 , 123 , 124 , 125 , 126 , 127 , 128 , 129 , 130 , 131 , 132 , 133 , 134 , 135 , 136 , 137 , 138 , 139 , 140 , 141 , 142 , 143 , 144 , 145 , 146 , 147 , 148 , 149 , 150 , 151 , 152 , 153 , 154 , 155 , 156 , 157 , 158 , 159};
-#elif defined(LAPTOP_MACHINE)
-static const int maxThreads = 4;
-static const int levels = 2;
-static const int participantsAtLevel[] = {2,4};
-static const int threadMappings[] = {0 , 1 , 2 , 3};
-#else
-#error "Machine topology not recognized"
-#endif
-
-
-struct zm_hmcs_lock{
+struct hmcs_lock{
     // Assumes tids range from [0.. maxThreads)
     // Assumes that tid 0 is close to tid and so on.
-    hmcs_leaf_node_t ** leafNodes __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    hmcs_leaf_t ** leafNodes __attribute__((aligned(ZM_CACHELINE_SIZE)));
 };
 
 int GetHWThreadId(int id){
@@ -362,7 +376,7 @@ static inline void* hmcs_lock_new(){
         totalLocksNeeded += maxThreads / participantsAtLevel[i] ;
     }
     HNode ** lockLocations = (HNode**)memalign(ZM_CACHELINE_SIZE, sizeof(HNode*) * totalLocksNeeded);
-    hmcs_leaf_node_t ** = leafNodes = (hmcs_leaf_t**)memalign(ZM_CACHELINE_SIZE, sizeof(hmcs_leaf_t*) * maxThreads);
+    hmcs_leaf_t ** leafNodes = (hmcs_leaf_t**)memalign(ZM_CACHELINE_SIZE, sizeof(hmcs_leaf_t*) * maxThreads);
 
 
     for(int tid = 0 ; tid < maxThreads; tid ++){
@@ -378,7 +392,7 @@ static inline void* hmcs_lock_new(){
                 //curLock->threshold = GetThresholdAtLevel(curLevel);
                 curLock->threshold = DEFAULT_THRESHOLD;
                 curLock->parent = NULL;
-                curLock->lock = NULL;
+                curLock->lock = ZM_NULL;
                 lockLocations[lockLocation] = curLock;
             }
         }
@@ -396,12 +410,14 @@ static inline void* hmcs_lock_new(){
                 lockLocations[lockLocation]->parent = lockLocations[parentLockLocation];
             }
         }
-        leafNodes[tid] = hmcs_leaf_new(lockLocations[tid/participantsAtLevel[0]], levels);
+        leafNodes[tid] = (hmcs_leaf_t*)hmcs_leaf_new(lockLocations[tid/participantsAtLevel[0]], levels);
     }
     free(lockLocations);
     // Restore affinity
     pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
     L->leafNodes = leafNodes;
+
+    return L;
 }
 
 static inline void hmcs_acquire(hmcs_lock_t *L){
@@ -410,34 +426,34 @@ static inline void hmcs_acquire(hmcs_lock_t *L){
         checkAffinity(tid);
         tid = GetHWThreadId(tid);
     }
-    hmcs_lock_acquire(&leafNodes[tid]);
+    hmcs_leaf_acquire(L->leafNodes[tid]);
 }
 
-static inline void hmcs_release(){
-    Release(&hmcs_node_leafNodes[tid]);
+static inline void hmcs_release(hmcs_lock_t *L){
+    hmcs_leaf_release(L->leafNodes[tid]);
 }
 
-inline __attribute__((flatten)) bool NoWaiters(){
-    return NoWaiters(leafNodes[tid]);
+inline int hmcs_nowaiters(hmcs_lock_t *L){
+    return hmcs_leaf_nowaiters(L->leafNodes[tid]);
 }
 
-void IzemHMCSLockInit(zm_hmcs_t *handle){
-    *handle  = hmcs_new_lock();
-}
+extern "C" {
 
 int zm_hmcs_init(zm_hmcs_t * handle) {
-    IzemHMCSLockInit(handle);
+    *handle  = (zm_hmcs_t) hmcs_lock_new();
     return 0;
 }
 
 int zm_hmcs_acquire(zm_hmcs_t L){
-    hmcs_acquire(hmcs_lock_t*)L);
+    hmcs_acquire((hmcs_lock_t*)L);
     return 0;
 }
 int zm_hmcs_release(zm_hmcs_t L){
-    hmcs_release(hmcs_lock_t*)L);
+    hmcs_release((hmcs_lock_t*)L);
     return 0;
 }
 int zm_hmcs_nowaiters(zm_hmcs_t L){
-    return hmcs_nowaiters(hmcs_lock_t*)L);
+    return hmcs_nowaiters((hmcs_lock_t*)L);
+}
+
 }
