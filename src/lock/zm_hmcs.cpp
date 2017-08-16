@@ -35,6 +35,10 @@
 #define handle_error_en(en, msg) \
 do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
 
+typedef struct HNode HNode_t;
+typedef struct hmcs_leaf hmcs_leaf_t;
+typedef struct hmcs_lock hmcs_lock_t;
+
 void SetAffinity(int tid){
     int s, j;
     cpu_set_t cpuset;
@@ -73,398 +77,367 @@ static inline void reuse_qnode(zm_mcs_qnode_t *I){
     zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
 }
 
-    struct HNode{
-        unsigned threshold __attribute__((aligned(ZM_CACHELINE_SIZE)));
-        struct HNode * parent __attribute__((aligned(ZM_CACHELINE_SIZE)));
-        zm_mcs_t lock __attribute__((aligned(ZM_CACHELINE_SIZE)));
-        zm_mcs_qnode_t node __attribute__((aligned(ZM_CACHELINE_SIZE)));
+struct HNode{
+    unsigned threshold __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    struct HNode * parent __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    zm_mcs_t lock __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    zm_mcs_qnode_t node __attribute__((aligned(ZM_CACHELINE_SIZE)));
 
-        inline void* operator new(size_t size) {
-            void *storage = memalign(ZM_CACHELINE_SIZE, size);
-            if(NULL == storage) {
-                throw "allocation fail : no free memory";
-            }
-            return storage;
-        }
+}__attribute__((aligned(ZM_CACHELINE_SIZE)));
 
-        inline bool IsTopLevel() {
-            return parent == NULL ? true : false;
-        }
-        /* TODO: Macro or Template this for fast comprison */
-        inline unsigned GetThreshold()const {
-            return threshold;
-        }
 
-        inline void SetThreshold(unsigned t) {
-            threshold = t;
-        }
+inline void* hnode_new() {
+    void *storage = memalign(ZM_CACHELINE_SIZE, sizeof(HNode_t);
+    if(NULL == storage) {
+        throw "allocation fail : no free memory";
+    }
+    return storage;
+}
 
-    }__attribute__((aligned(ZM_CACHELINE_SIZE)));
+/* TODO: delete this in a cleanup commit */
+inline int IsTopLevel(HNode_t *L) {
+    return L->parent == NULL ? 1 : 0;
+}
+/* TODO: Macro or Template this for fast comprison */
+inline unsigned GetThreshold(HNode_t *L) const {
+    return L->threshold;
+}
 
-    inline static void NormalMCSReleaseWithValue(HNode * L, zm_mcs_qnode_t *I, unsigned val){
+inline void SetThreshold(HNode_t *L, unsigned t) {
+    L->threshold = t;
+}
 
-        zm_mcs_qnode_t *succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire);
-        if(succ) {
-            zm_atomic_store(&succ->status, val, zm_memord_release);
-            return;
-        }
-        zm_mcs_qnode_t *tmp = I;
-        if (zm_atomic_compare_exchange_strong(&(L->lock),
-                                              (zm_ptr_t*)&tmp,
-                                               ZM_NULL,
-                                               zm_memord_acq_rel,
-                                               zm_memord_acquire))
-            return;
-        while(succ == NULL)
-            succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire); /* SPIN */
+inline static void NormalMCSReleaseWithValue(HNode_t * L, zm_mcs_qnode_t *I, unsigned val){
+
+    zm_mcs_qnode_t *succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire);
+    if(succ) {
         zm_atomic_store(&succ->status, val, zm_memord_release);
         return;
     }
+    zm_mcs_qnode_t *tmp = I;
+    if (zm_atomic_compare_exchange_strong(&(L->lock),
+                                          (zm_ptr_t*)&tmp,
+                                           ZM_NULL,
+                                           zm_memord_acq_rel,
+                                           zm_memord_acquire))
+        return;
+    while(succ == NULL)
+        succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire); /* SPIN */
+    zm_atomic_store(&succ->status, val, zm_memord_release);
+    return;
+}
 
-    template<int level>
-    struct HMCSLock{
-        inline static void AcquireHelper(HNode * L, zm_mcs_qnode_t *I) {
-            // Prepare the node for use.
-            reuse_qnode(I);
-            zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
-            if(!pred) {
-                // I am the first one at this level
-                // begining of cohort
-                zm_atomic_store(&I->status, COHORT_START, zm_memord_release);
-                // Acquire at next level if not at the top level
-                HMCSLock<level-1>::AcquireHelper(L->parent, &(L->node));
-                return;
-            } else {
-                zm_atomic_store(&pred->next, I, zm_memord_release);
-                for(;;){
-                    unsigned myStatus = zm_atomic_load(&I->status, zm_memord_acquire);
-                    if(myStatus < ACQUIRE_PARENT) {
-                        return;
-                    }
-                    if(myStatus == ACQUIRE_PARENT) {
-                        // beginning of cohort
-                        zm_atomic_store(&I->status, COHORT_START, zm_memord_release);
-                        // This means this level is acquired and we can start the next level
-                        HMCSLock<level-1>::AcquireHelper(L->parent, &(L->node));
-                        return;
-                    }
-                    // spin back; (I->status == WAIT)
+inline static void AcquireRoot(HNode_t * L, zm_mcs_qnode_t *I) {
+    // Prepare the node for use.
+    reuse_qnode(I);
+    zm_mcs_qnode_t *pred = (zm_mcs_qnode_t*) zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
+
+    if(!pred) {
+        // I am the first one at this level
+        return;
+    }
+
+    zm_atomic_store(&pred->next, I, zm_memord_release);
+    while(zm_atomic_load(&I->status, zm_memord_acquire) == WAIT)
+        ; /* SPIN */
+    return;
+}
+
+
+inline static void ReleaseRoot(HNode_t * L, zm_mcs_qnode_t *I) {
+    // Top level release is usual MCS
+    // At the top level MCS we always writr COHORT_START since
+    // 1. It will release the lock
+    // 2. Will never grow large
+    // 3. Avoids a read from I->status
+    NormalMCSReleaseWithValue(L, I, COHORT_START);
+}
+
+inline static int NoWaitersRoot(HNode_t * L, zm_mcs_qnode_t *I) {
+    return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
+}
+
+inline static void AcquireHelper(int level, HNode_t * L, zm_mcs_qnode_t *I) {
+    // Trivial case = root level
+    if (level == 1)
+        AcquireRoot(L, I);
+    else {
+        // Prepare the node for use.
+        reuse_qnode(I);
+        zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
+        if(!pred) {
+            // I am the first one at this level
+            // begining of cohort
+            zm_atomic_store(&I->status, COHORT_START, zm_memord_release);
+            // Acquire at next level if not at the top level
+            AcquireHelper(level - 1, L->parent, &(L->node));
+            return;
+        } else {
+            zm_atomic_store(&pred->next, I, zm_memord_release);
+            for(;;){
+                unsigned myStatus = zm_atomic_load(&I->status, zm_memord_acquire);
+                if(myStatus < ACQUIRE_PARENT) {
+                    return;
                 }
+                if(myStatus == ACQUIRE_PARENT) {
+                    // beginning of cohort
+                    zm_atomic_store(&I->status, COHORT_START, zm_memord_release);
+                    // This means this level is acquired and we can start the next level
+                    AcquireHelper(level - 1, L->parent, &(L->node));
+                    return;
+                }
+                // spin back; (I->status == WAIT)
             }
         }
+    }
+}
 
-        inline static void Acquire(HNode * L, zm_mcs_qnode_t *I) {
-            HMCSLock<level>::AcquireHelper(L, I);
-            //FORCE_INS_ORDERING();
-        }
+inline static void Acquire(int level, HNode_t * L, zm_mcs_qnode_t *I) {
+    AcquireHelper(level, L, I);
+    //FORCE_INS_ORDERING();
+}
 
-        inline static void ReleaseHelper(HNode * L, zm_mcs_qnode_t *I) {
+inline static void ReleaseHelper(int level, HNode_t * L, zm_mcs_qnode_t *I) {
+    // Trivial case = root level
+    if (level == 1) {
+        ReleaseRoot(L, I);
+    } else {
+        unsigned curCount = zm_atomic_load(&(I->status), zm_memord_acquire) ;
+        zm_mcs_qnode_t * succ;
 
-            unsigned curCount = zm_atomic_load(&(I->status), zm_memord_acquire) ;
-            zm_mcs_qnode_t * succ;
-
-            // Lower level releases
-            if(curCount == L->GetThreshold()) {
-                // NO KNOWN SUCCESSORS / DESCENDENTS
-                // reached threshold and have next level
-                // release to next level
-                HMCSLock<level - 1>::ReleaseHelper(L->parent, &(L->node));
-                //COMMIT_ALL_WRITES();
-                // Tap successor at this level and ask to spin acquire next level lock
-                NormalMCSReleaseWithValue(L, I, ACQUIRE_PARENT);
-                return;
-            }
-
-            succ = (zm_mcs_qnode_t*)zm_atomic_load(&(I->next), zm_memord_acquire);
-            // Not reached threshold
-            if(succ) {
-                zm_atomic_store(&succ->status, curCount + 1, zm_memord_release);
-                return; // Released
-            }
-            // No known successor, so release
-            HMCSLock<level - 1>::ReleaseHelper(L->parent, &(L->node));
+        // Lower level releases
+        if(curCount == GetThreshold(L)) {
+            // NO KNOWN SUCCESSORS / DESCENDENTS
+            // reached threshold and have next level
+            // release to next level
+            ReleaseHelper(level - 1, L->parent, &(L->node));
             //COMMIT_ALL_WRITES();
             // Tap successor at this level and ask to spin acquire next level lock
             NormalMCSReleaseWithValue(L, I, ACQUIRE_PARENT);
-        }
-
-        inline static void Release(HNode * L, zm_mcs_qnode_t *I) {
-            //COMMIT_ALL_WRITES();
-            HMCSLock<level>::ReleaseHelper(L, I);
-        }
-
-        inline static bool NoWaiters(HNode * L, zm_mcs_qnode_t *I) {
-            if(zm_atomic_load(&I->next, zm_memord_acquire) != ZM_NULL)
-                return false;
-            else
-                return HMCSLock<level - 1>::NoWaiters(L->parent, &(L->node));
-        }
-    };
-
-    template <>
-    struct HMCSLock<1> {
-        inline static void AcquireHelper(HNode * L, zm_mcs_qnode_t *I) {
-            // Prepare the node for use.
-            reuse_qnode(I);
-            zm_mcs_qnode_t *pred = (zm_mcs_qnode_t*) zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
-
-            if(!pred) {
-                // I am the first one at this level
-                return;
-            }
-
-            zm_atomic_store(&pred->next, I, zm_memord_release);
-            while(zm_atomic_load(&I->status, zm_memord_acquire) == WAIT)
-                ; /* SPIN */
             return;
         }
 
-
-        inline static void Acquire(HNode * L, zm_mcs_qnode_t *I) {
-            HMCSLock<1>::AcquireHelper(L, I);
-            //FORCE_INS_ORDERING();
+        succ = (zm_mcs_qnode_t*)zm_atomic_load(&(I->next), zm_memord_acquire);
+        // Not reached threshold
+        if(succ) {
+            zm_atomic_store(&succ->status, curCount + 1, zm_memord_release);
+            return; // Released
         }
+        // No known successor, so release
+        ReleaseHelper(level - 1, L->parent, &(L->node));
+        //COMMIT_ALL_WRITES();
+        // Tap successor at this level and ask to spin acquire next level lock
+        NormalMCSReleaseWithValue(L, I, ACQUIRE_PARENT);
+    }
+}
 
-        inline static void ReleaseHelper(HNode * L, zm_mcs_qnode_t *I) {
-            // Top level release is usual MCS
-            // At the top level MCS we always writr COHORT_START since
-            // 1. It will release the lock
-            // 2. Will never grow large
-            // 3. Avoids a read from I->status
-            NormalMCSReleaseWithValue(L, I, COHORT_START);
-        }
+inline static void Release(int level, HNode_t * L, zm_mcs_qnode_t *I) {
+    //COMMIT_ALL_WRITES();
+    ReleaseHelper(level, L, I);
+}
 
-        inline static void Release(HNode * L, zm_mcs_qnode_t *I) {
-            //COMMIT_ALL_WRITES();
-            HMCSLock<1>::ReleaseHelper(L, I);
-        }
+inline static bool NoWaiters(int level, HNode_t * L, zm_mcs_qnode_t *I) {
+    if (level == 1 ) {
+        return NoWaitersRoot(L,I);
+    } else {
+        if(zm_atomic_load(&I->next, zm_memord_acquire) != ZM_NULL)
+            return false;
+        else
+            return NoWaiters(level - 1, L->parent, &(L->node));
+    }
+}
 
-        inline static bool NoWaiters(HNode * L, zm_mcs_qnode_t *I) {
-            return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
-        }
-    };
+struct hmcs_leaf{
+    HNode * curNode;
+    HNode * rootNode;
+    zm_mcs_qnode_t I;
+    int curDepth;
+    bool tookFP;
+};
 
-    typedef void (*AcquireFP) (HNode *, zm_mcs_qnode_t *);
-    typedef void (*ReleaseFP) (HNode *, zm_mcs_qnode_t *);
-    struct HMCSLockWrapper{
-        HNode * curNode;
-        HNode * rootNode;
-        zm_mcs_qnode_t I;
-        int curDepth;
-        bool tookFP;
+static inline void* hmcs_leaf_new(HNode_t *h, int depth) {
+    hmcs_leaf_t *leaf = (hmcs_leaf_t *)memalign(ZM_CACHELINE_SIZE, sizeof(hmcs_leaf_t));
+    assert(leaf != NULL);
+    leaf->curNode = h;
+    leaf->curDepth = depth;
+    leaf->tookFP = FALSE;
+    HNode_t * tmp, rootNode;
+    for(tmp = curNode; tmp->parent != NULL; tmp = tmp->parent);
+        rootNode = tmp;
+    leaf->rootNode = rootNode;
+    return storage;
+}
 
-        inline void* operator new(size_t size) {
-            void *storage = memalign(ZM_CACHELINE_SIZE, size);
-            if(NULL == storage) {
-                throw "allocation fail : no free memory";
-            }
-            return storage;
-        }
+static inline void hmcs_leaf_Acquire(hmcs_leaf_t *L){
+    if(L->curNode->lock == NULL && L->rootNode->lock == NULL) {
+        // go FP
+        L->tookFP = TRUE;
+        AcquireRoot(L->rootNode, &L->I);
+        return;
+    }
+    Acquire(levels, L->curNode, &L->I);
+    return;
+}
 
-        HMCSLockWrapper(HNode * h, int depth) : curNode(h), curDepth(depth), tookFP(false) {
-            HNode * tmp;
-            for(tmp = curNode; tmp->parent != NULL; tmp = tmp->parent);
-            rootNode = tmp;
-        }
+static inline void hmcs_leaf_Release(hmcs_leaf_t *L){
+    //myRelease(curNode, I);
+    if(L->tookFP) {
+        ReleaseRoot(L->rootNode, &L->I);
+        L->tookFP = FALSE;
+        return;
+    }
+    Release(levels, L->curNode, &L->I); break;
+    return;
+}
 
-        inline __attribute__((flatten)) void Acquire(){
-            if(curNode->lock == NULL && rootNode->lock == NULL) {
-                // go FP
-                tookFP = true;
-                HMCSLock<1>::Acquire(rootNode, &I);
-                return;
-            }
-            switch(curDepth){
-                case 1:  HMCSLock<1>::Acquire(curNode, &I); break;
-                case 2:  HMCSLock<2>::Acquire(curNode, &I); break;
-                case 3:  HMCSLock<3>::Acquire(curNode, &I); break;
-                case 4:  HMCSLock<4>::Acquire(curNode, &I); break;
-                case 5:  HMCSLock<5>::Acquire(curNode, &I); break;
-                default: assert(0 && "NYI");
-            }
-            return;
-        }
+static inline bool hmcs_leaf_NoWaiters(hmcs_leaf_t *L){
+    // Shouldnt this be NoWaiters(rootNode, I)?
+    if(L->tookFP) {
+        return NoWaitersRoot(L->curNode, &L->I);
+    }
 
-        inline __attribute__((flatten)) void Release(){
-            //myRelease(curNode, I);
-            if(tookFP) {
-                HMCSLock<1>::Release(rootNode, &I);
-                tookFP = false;
-                return;
-            }
-            switch(curDepth){
-                case 1:  HMCSLock<1>::Release(curNode, &I); break;
-                case 2:  HMCSLock<2>::Release(curNode, &I); break;
-                case 3:  HMCSLock<3>::Release(curNode, &I); break;
-                case 4:  HMCSLock<4>::Release(curNode, &I); break;
-                case 5:  HMCSLock<5>::Release(curNode, &I); break;
-                default: assert(0 && "NYI");
-            }
-        }
+    return NoWaiters(L->curNode, &L->I);
+}
 
-        inline __attribute__((flatten)) bool NoWaiters(){
-            if(tookFP) {
-                return HMCSLock<1>::NoWaiters(curNode, &I);
-            }
+static zm_thread_local int tid = -1;
 
-            switch(curDepth){
-                case 1:  return HMCSLock<1>::NoWaiters(curNode, &I);
-                case 2:  return HMCSLock<2>::NoWaiters(curNode, &I);
-                case 3:  return HMCSLock<3>::NoWaiters(curNode, &I);
-                case 4:  return HMCSLock<4>::NoWaiters(curNode, &I);
-                case 5:  return HMCSLock<5>::NoWaiters(curNode, &I);
-                default: assert(0 && "NYI");
-            }
-        }
-    };
-
-
-    static zm_thread_local int tid = -1;
-    static int threadMappingMax;
-
-//#define IT_MACHINE
+#define IT_MACHINE
 //#define THING_MACHINE
-#define FIRESTONE_MACHINE
+//#define FIRESTONE_MACHINE
 //#define LAPTOP_MACHINE
 
 #if defined(IT_MACHINE)
-    static int threadMappings[] = {0, 44, 1, 45, 2, 46, 3, 47, 4, 48, 5, 49, 6, 50, 7, 51, 8, 52, 9, 53, 10, 54, 11, 55, 12, 56, 13, 57, 14, 58, 15, 59, 16, 60, 17, 61, 18, 62, 19, 63, 20, 64, 21, 65, 22, 66, 23, 67, 24, 68, 25, 69, 26, 70, 27, 71, 28, 72, 29, 73, 30, 74, 31, 75, 32, 76, 33, 77, 34, 78, 35, 79, 36, 80, 37, 81, 38, 82, 39, 83, 40, 84, 41, 85, 42, 86, 43, 87};
+static const int maxThreads = 88;
+static const int levels = 3;
+static const int participantsAtLevel[] = {2,22,88};
+static const int threadMappings[] = {0, 44, 1, 45, 2, 46, 3, 47, 4, 48, 5, 49, 6, 50, 7, 51, 8, 52, 9, 53, 10, 54, 11, 55, 12, 56, 13, 57, 14, 58, 15, 59, 16, 60, 17, 61, 18, 62, 19, 63, 20, 64, 21, 65, 22, 66, 23, 67, 24, 68, 25, 69, 26, 70, 27, 71, 28, 72, 29, 73, 30, 74, 31, 75, 32, 76, 33, 77, 34, 78, 35, 79, 36, 80, 37, 81, 38, 82, 39, 83, 40, 84, 41, 85, 42, 86, 43, 87};
 #elif defined(THING_MACHINE)
-    static int threadMappings[] = {0 , 36 , 1 , 37 , 2 , 38 , 3 , 39 , 4 , 40 , 5 , 41 , 6 , 42 , 7 , 43 , 8 , 44 , 9 , 45 , 10 , 46 , 11 , 47 , 12 , 48 , 13 , 49 , 14 , 50 , 15 , 51 , 16 , 52 , 17 , 53 , 18 , 54 , 19 , 55 , 20 , 56 , 21 , 57 , 22 , 58 , 23 , 59 , 24 , 60 , 25 , 61 , 26 , 62 , 27 , 63 , 28 , 64 , 29 , 65 , 30 , 66 , 31 , 67 , 32 , 68 , 33 , 69 , 34 , 70 , 35 , 71};
+static const int maxThreads = 72;
+static const int levels = 3;
+static const int participantsAtLevel[] = {2,18,72};
+static const int threadMappings[] = {0 , 36 , 1 , 37 , 2 , 38 , 3 , 39 , 4 , 40 , 5 , 41 , 6 , 42 , 7 , 43 , 8 , 44 , 9 , 45 , 10 , 46 , 11 , 47 , 12 , 48 , 13 , 49 , 14 , 50 , 15 , 51 , 16 , 52 , 17 , 53 , 18 , 54 , 19 , 55 , 20 , 56 , 21 , 57 , 22 , 58 , 23 , 59 , 24 , 60 , 25 , 61 , 26 , 62 , 27 , 63 , 28 , 64 , 29 , 65 , 30 , 66 , 31 , 67 , 32 , 68 , 33 , 69 , 34 , 70 , 35 , 71};
 #elif defined(FIRESTONE_MACHINE)
-static int threadMappings[] = {0 , 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , 10 , 11 , 12 , 13 , 14 , 15 , 16 , 17 , 18 , 19 , 20 , 21 , 22 , 23 , 24 , 25 , 26 , 27 , 28 , 29 , 30 , 31 , 32 , 33 , 34 , 35 , 36 , 37 , 38 , 39 , 40 , 41 , 42 , 43 , 44 , 45 , 46 , 47 , 48 , 49 , 50 , 51 , 52 , 53 , 54 , 55 , 56 , 57 , 58 , 59 , 60 , 61 , 62 , 63 , 64 , 65 , 66 , 67 , 68 , 69 , 70 , 71 , 72 , 73 , 74 , 75 , 76 , 77 , 78 , 79 , 80 , 81 , 82 , 83 , 84 , 85 , 86 , 87 , 88 , 89 , 90 , 91 , 92 , 93 , 94 , 95 , 96 , 97 , 98 , 99 , 100 , 101 , 102 , 103 , 104 , 105 , 106 , 107 , 108 , 109 , 110 , 111 , 112 , 113 , 114 , 115 , 116 , 117 , 118 , 119 , 120 , 121 , 122 , 123 , 124 , 125 , 126 , 127 , 128 , 129 , 130 , 131 , 132 , 133 , 134 , 135 , 136 , 137 , 138 , 139 , 140 , 141 , 142 , 143 , 144 , 145 , 146 , 147 , 148 , 149 , 150 , 151 , 152 , 153 , 154 , 155 , 156 , 157 , 158 , 159};
+static const int maxThreads = 160;
+static const int levels = 3;
+static const int participantsAtLevel[] = {8,80,160};
+static const int threadMappings[] = {0 , 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , 10 , 11 , 12 , 13 , 14 , 15 , 16 , 17 , 18 , 19 , 20 , 21 , 22 , 23 , 24 , 25 , 26 , 27 , 28 , 29 , 30 , 31 , 32 , 33 , 34 , 35 , 36 , 37 , 38 , 39 , 40 , 41 , 42 , 43 , 44 , 45 , 46 , 47 , 48 , 49 , 50 , 51 , 52 , 53 , 54 , 55 , 56 , 57 , 58 , 59 , 60 , 61 , 62 , 63 , 64 , 65 , 66 , 67 , 68 , 69 , 70 , 71 , 72 , 73 , 74 , 75 , 76 , 77 , 78 , 79 , 80 , 81 , 82 , 83 , 84 , 85 , 86 , 87 , 88 , 89 , 90 , 91 , 92 , 93 , 94 , 95 , 96 , 97 , 98 , 99 , 100 , 101 , 102 , 103 , 104 , 105 , 106 , 107 , 108 , 109 , 110 , 111 , 112 , 113 , 114 , 115 , 116 , 117 , 118 , 119 , 120 , 121 , 122 , 123 , 124 , 125 , 126 , 127 , 128 , 129 , 130 , 131 , 132 , 133 , 134 , 135 , 136 , 137 , 138 , 139 , 140 , 141 , 142 , 143 , 144 , 145 , 146 , 147 , 148 , 149 , 150 , 151 , 152 , 153 , 154 , 155 , 156 , 157 , 158 , 159};
 #elif defined(LAPTOP_MACHINE)
-    static int threadMappings[] = {0 , 1 , 2 , 3};
+static const int maxThreads = 4;
+static const int levels = 2;
+static const int participantsAtLevel[] = {2,4};
+static const int threadMappings[] = {0 , 1 , 2 , 3};
 #else
 #error "Machine topology not recognized"
 #endif
 
 
-struct IzemHMCSLock{
+struct zm_hmcs_lock{
     // Assumes tids range from [0.. maxThreads)
     // Assumes that tid 0 is close to tid and so on.
-    HNode ** lockLocations __attribute__((aligned(ZM_CACHELINE_SIZE)));
-    HMCSLockWrapper ** leafNodes __attribute__((aligned(ZM_CACHELINE_SIZE)));
-    int GetHWThreadId(int id){
-       for(int i = 0 ; i < threadMappingMax; i++)
-           if(id == threadMappings[i])
-                return i;
-
-       assert(0 && "Should never reach here");
-    }
-    IzemHMCSLock(int maxThreads, int levels, int * participantsAtLevel){
-         threadMappingMax = maxThreads;
-        // Total locks needed = participantsPerLevel[1] + participantsPerLevel[2] + .. participantsPerLevel[levels-1] + 1
-        // Save affinity
-        pthread_t thread = pthread_self();
-        cpu_set_t cpuset;
-        CPU_ZERO(&cpuset);
-        pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-
-        int totalLocksNeeded = 0;
-
-        for (int i=0; i < levels; i++) {
-            totalLocksNeeded += maxThreads / participantsAtLevel[i] ;
-        }
-        lockLocations = (HNode**)memalign(ZM_CACHELINE_SIZE, sizeof(HNode*) * totalLocksNeeded);
-        leafNodes = (HMCSLockWrapper**)memalign(ZM_CACHELINE_SIZE, sizeof(HMCSLockWrapper*) * maxThreads);
-
-
-        for(int tid = 0 ; tid < maxThreads; tid ++){
-            SetAffinity(threadMappings[tid]);
-            // Pin me to hw-thread-id = tid
-            int lastLockLocationEnd = 0;
-            for(int curLevel = 0 ; curLevel < levels; curLevel++){
-                if (tid%participantsAtLevel[curLevel] == 0) {
-                    // master, initialize the lock
-                    int lockLocation = lastLockLocationEnd + tid/participantsAtLevel[curLevel];
-                    lastLockLocationEnd += maxThreads/participantsAtLevel[curLevel];
-                    HNode * curLock = new HNode();
-                    //curLock->threshold = GetThresholdAtLevel(curLevel);
-                    curLock->threshold = DEFAULT_THRESHOLD;
-                    curLock->parent = NULL;
-                    curLock->lock = NULL;
-                    lockLocations[lockLocation] = curLock;
-                }
-            }
-        }
-
-        // setup parents
-        for(int tid = 0 ; tid < maxThreads; tid ++){
-            SetAffinity(threadMappings[tid]);
-            int lastLockLocationEnd = 0;
-            for(int curLevel = 0 ; curLevel < levels - 1; curLevel++){
-                if (tid%participantsAtLevel[curLevel] == 0) {
-                    int lockLocation = lastLockLocationEnd + tid/participantsAtLevel[curLevel];
-                    lastLockLocationEnd += maxThreads/participantsAtLevel[curLevel];
-                    int parentLockLocation = lastLockLocationEnd + tid/participantsAtLevel[curLevel+1];
-                    lockLocations[lockLocation]->parent = lockLocations[parentLockLocation];
-                }
-            }
-            leafNodes[tid] = new HMCSLockWrapper(lockLocations[tid/participantsAtLevel[0]], levels);
-        }
-        free(lockLocations);
-        // Restore affinity
-        pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-    }
-
-    inline __attribute__((flatten)) void Acquire(){
-        if (zm_unlikely(tid == -1)) {
-            tid = sched_getcpu();
-            checkAffinity(tid);
-            tid = GetHWThreadId(tid);
-        }
-        leafNodes[tid]->Acquire();
-    }
-
-    inline __attribute__((flatten)) void Release(){
-        leafNodes[tid]->Release();
-    }
-
-    inline __attribute__((flatten)) bool NoWaiters(){
-        return leafNodes[tid]->NoWaiters();
-    }
+    hmcs_leaf_node_t ** leafNodes __attribute__((aligned(ZM_CACHELINE_SIZE)));
 };
 
+int GetHWThreadId(int id){
+   for(int i = 0 ; i < maxThreads; i++)
+       if(id == threadMappings[i])
+            return i;
 
-void IzemHMCSLockInit(zm_hmcs_t *handle){
-    // Get config;
-#if defined(IT_MACHINE)
-    int maxThreads = 88;
-    int  levels = 3;
-    int  participantsAtLevel[] = {2,22,88};
-#elif defined(THING_MACHINE)
-    int maxThreads = 72;
-    int  levels = 3;
-    int  participantsAtLevel[] = {2,18,72};
-#elif defined(FIRESTONE_MACHINE)
-    int maxThreads = 160;
-    int  levels = 3;
-    int  participantsAtLevel[] = {8,80,160};
-#elif defined(LAPTOP_MACHINE)
-    int maxThreads = 4;
-    int  levels = 2;
-    int  participantsAtLevel[] = {2,4};
-#endif
-    *handle  = (zm_hmcs_t) new IzemHMCSLock(maxThreads, levels, participantsAtLevel);
+   assert(0 && "Should never reach here");
 }
 
-extern "C" {
+static inline void* hmcs_lock_new(){
 
-    int zm_hmcs_init(zm_hmcs_t * handle) {
-        IzemHMCSLockInit(handle);
-        return 0;
+    hmcs_lock_t *L = (hmcs_lock_t*)memalign(ZM_CACHELINE_SIZE, sizeof(hmcs_lock_t));
+
+    // Total locks needed = participantsPerLevel[1] + participantsPerLevel[2] + .. participantsPerLevel[levels-1] + 1
+    // Save affinity
+    pthread_t thread = pthread_self();
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    pthread_getaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+
+    int totalLocksNeeded = 0;
+
+    for (int i=0; i < levels; i++) {
+        totalLocksNeeded += maxThreads / participantsAtLevel[i] ;
+    }
+    HNode ** lockLocations = (HNode**)memalign(ZM_CACHELINE_SIZE, sizeof(HNode*) * totalLocksNeeded);
+    hmcs_leaf_node_t ** = leafNodes = (hmcs_leaf_t**)memalign(ZM_CACHELINE_SIZE, sizeof(hmcs_leaf_t*) * maxThreads);
+
+
+    for(int tid = 0 ; tid < maxThreads; tid ++){
+        SetAffinity(threadMappings[tid]);
+        // Pin me to hw-thread-id = tid
+        int lastLockLocationEnd = 0;
+        for(int curLevel = 0 ; curLevel < levels; curLevel++){
+            if (tid%participantsAtLevel[curLevel] == 0) {
+                // master, initialize the lock
+                int lockLocation = lastLockLocationEnd + tid/participantsAtLevel[curLevel];
+                lastLockLocationEnd += maxThreads/participantsAtLevel[curLevel];
+                HNode * curLock = new HNode();
+                //curLock->threshold = GetThresholdAtLevel(curLevel);
+                curLock->threshold = DEFAULT_THRESHOLD;
+                curLock->parent = NULL;
+                curLock->lock = NULL;
+                lockLocations[lockLocation] = curLock;
+            }
+        }
     }
 
-    int zm_hmcs_acquire(zm_hmcs_t L){
-        ((struct IzemHMCSLock*)L)->Acquire();
-        return 0;
+    // setup parents
+    for(int tid = 0 ; tid < maxThreads; tid ++){
+        SetAffinity(threadMappings[tid]);
+        int lastLockLocationEnd = 0;
+        for(int curLevel = 0 ; curLevel < levels - 1; curLevel++){
+            if (tid%participantsAtLevel[curLevel] == 0) {
+                int lockLocation = lastLockLocationEnd + tid/participantsAtLevel[curLevel];
+                lastLockLocationEnd += maxThreads/participantsAtLevel[curLevel];
+                int parentLockLocation = lastLockLocationEnd + tid/participantsAtLevel[curLevel+1];
+                lockLocations[lockLocation]->parent = lockLocations[parentLockLocation];
+            }
+        }
+        leafNodes[tid] = hmcs_leaf_new(lockLocations[tid/participantsAtLevel[0]], levels);
     }
-    int zm_hmcs_release(zm_hmcs_t L){
-        ((struct IzemHMCSLock*)L)->Release();
-        return 0;
+    free(lockLocations);
+    // Restore affinity
+    pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+    L->leafNodes = leafNodes;
+}
+
+static inline void hmcs_acquire(hmcs_lock_t *L){
+    if (zm_unlikely(tid == -1)) {
+        tid = sched_getcpu();
+        checkAffinity(tid);
+        tid = GetHWThreadId(tid);
     }
-    int zm_hmcs_nowaiters(zm_hmcs_t L){
-        return (int) ((struct IzemHMCSLock*)L)->NoWaiters();
-    }
+    hmcs_lock_acquire(&leafNodes[tid]);
+}
+
+static inline void hmcs_release(){
+    Release(&hmcs_node_leafNodes[tid]);
+}
+
+inline __attribute__((flatten)) bool NoWaiters(){
+    return NoWaiters(leafNodes[tid]);
+}
+
+void IzemHMCSLockInit(zm_hmcs_t *handle){
+    *handle  = hmcs_new_lock();
+}
+
+int zm_hmcs_init(zm_hmcs_t * handle) {
+    IzemHMCSLockInit(handle);
+    return 0;
+}
+
+int zm_hmcs_acquire(zm_hmcs_t L){
+    hmcs_acquire(hmcs_lock_t*)L);
+    return 0;
+}
+int zm_hmcs_release(zm_hmcs_t L){
+    hmcs_release(hmcs_lock_t*)L);
+    return 0;
+}
+int zm_hmcs_nowaiters(zm_hmcs_t L){
+    return hmcs_nowaiters(hmcs_lock_t*)L);
 }
