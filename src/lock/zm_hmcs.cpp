@@ -135,7 +135,10 @@ struct HNode{
 
 static inline void* hnode_new() {
     void *storage = memalign(ZM_CACHELINE_SIZE, sizeof(HNode_t));
-    assert(storage != NULL);
+    if (storage == NULL) {
+        printf("Memalign failed in HMCS : hnode_new \n");
+        exit(EXIT_FAILURE);
+    }
     return storage;
 }
 
@@ -302,7 +305,10 @@ struct hmcs_leaf{
 
 static inline void* hmcs_leaf_new(HNode_t *h, int depth) {
     hmcs_leaf_t *leaf = (hmcs_leaf_t *)memalign(ZM_CACHELINE_SIZE, sizeof(hmcs_leaf_t));
-    assert(leaf != NULL);
+    if (leaf == NULL) {
+        printf("Memalign failed in HMCS : hmcs_leaf_new \n");
+        exit(EXIT_FAILURE);
+    }
     leaf->curNode = h;
     leaf->curDepth = depth;
     leaf->tookFP = FALSE;
