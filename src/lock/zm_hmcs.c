@@ -45,6 +45,21 @@
 #error "TRUE already defined"
 #endif
 
+/* Atomic operation shorthands. The memory ordering defaults to:
+ * 1- Acquire ordering for loads
+ * 2- Release ordering for stores
+ * 3- Acquire+Release ordering for read-modify-write operations
+ * */
+
+#define LOAD(addr)                  zm_atomic_load(addr, zm_memord_acquire)
+#define STORE(addr, val)            zm_atomic_store(addr, val, zm_memord_release)
+#define SWAP(addr, desire)          zm_atomic_exchange(addr, desire, zm_memord_acq_rel)
+#define CAS(addr, expect, desire)   zm_atomic_compare_exchange_strong(addr,\
+                                                                      expect,\
+                                                                      desire,\
+                                                                      zm_memord_acq_rel,\
+                                                                      zm_memord_acquire)
+
 struct hnode{
     unsigned threshold __attribute__((aligned(ZM_CACHELINE_SIZE)));
     struct hnode * parent __attribute__((aligned(ZM_CACHELINE_SIZE)));
@@ -138,8 +153,8 @@ static void check_affinity(int tid) {
 }
 
 static inline void reuse_qnode(zm_mcs_qnode_t *I){
-    zm_atomic_store(&I->status, WAIT, zm_memord_release);
-    zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
+    STORE(&I->status, WAIT);
+    STORE(&I->next, ZM_NULL);
 }
 
 static void* new_hnode() {
@@ -158,36 +173,32 @@ static inline unsigned get_threshold(struct hnode *L) {
 
 static inline void normal_mcs_release_with_value(struct hnode * L, zm_mcs_qnode_t *I, unsigned val){
 
-    zm_mcs_qnode_t *succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire);
+    zm_mcs_qnode_t *succ = (zm_mcs_qnode_t *)LOAD(&I->next);
     if(succ) {
-        zm_atomic_store(&succ->status, val, zm_memord_release);
+        STORE(&succ->status, val);
         return;
     }
     zm_mcs_qnode_t *tmp = I;
-    if (zm_atomic_compare_exchange_strong(&(L->lock),
-                                          (zm_ptr_t*)&tmp,
-                                           ZM_NULL,
-                                           zm_memord_acq_rel,
-                                           zm_memord_acquire))
+    if (CAS(&(L->lock), (zm_ptr_t*)&tmp,ZM_NULL))
         return;
     while(succ == NULL)
-        succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire); /* SPIN */
-    zm_atomic_store(&succ->status, val, zm_memord_release);
+        succ = (zm_mcs_qnode_t *)LOAD(&I->next); /* SPIN */
+    STORE(&succ->status, val);
     return;
 }
 
 static inline void acquire_root(struct hnode * L, zm_mcs_qnode_t *I) {
     // Prepare the node for use.
     reuse_qnode(I);
-    zm_mcs_qnode_t *pred = (zm_mcs_qnode_t*) zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
+    zm_mcs_qnode_t *pred = (zm_mcs_qnode_t*) SWAP(&(L->lock), (zm_ptr_t)I);
 
     if(!pred) {
         // I am the first one at this level
         return;
     }
 
-    zm_atomic_store(&pred->next, I, zm_memord_release);
-    while(zm_atomic_load(&I->status, zm_memord_acquire) == WAIT)
+    STORE(&pred->next, I);
+    while(LOAD(&I->status) == WAIT)
         ; /* SPIN */
     return;
 }
@@ -202,7 +213,7 @@ static inline void release_root(struct hnode * L, zm_mcs_qnode_t *I) {
 }
 
 static inline int nowaiters_root(struct hnode * L, zm_mcs_qnode_t *I) {
-    return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
+    return (LOAD(&I->next) == ZM_NULL);
 }
 
 static inline void acquire_helper(int level, struct hnode * L, zm_mcs_qnode_t *I) {
@@ -212,24 +223,24 @@ static inline void acquire_helper(int level, struct hnode * L, zm_mcs_qnode_t *I
     else {
         // Prepare the node for use.
         reuse_qnode(I);
-        zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
+        zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)SWAP(&(L->lock), (zm_ptr_t)I);
         if(!pred) {
             // I am the first one at this level
             // begining of cohort
-            zm_atomic_store(&I->status, COHORT_START, zm_memord_release);
+            STORE(&I->status, COHORT_START);
             // acquire at next level if not at the top level
             acquire_helper(level - 1, L->parent, &(L->node));
             return;
         } else {
-            zm_atomic_store(&pred->next, I, zm_memord_release);
+            STORE(&pred->next, I);
             for(;;){
-                unsigned myStatus = zm_atomic_load(&I->status, zm_memord_acquire);
+                unsigned myStatus = LOAD(&I->status);
                 if(myStatus < ACQUIRE_PARENT) {
                     return;
                 }
                 if(myStatus == ACQUIRE_PARENT) {
                     // beginning of cohort
-                    zm_atomic_store(&I->status, COHORT_START, zm_memord_release);
+                    STORE(&I->status, COHORT_START);
                     // This means this level is acquired and we can start the next level
                     acquire_helper(level - 1, L->parent, &(L->node));
                     return;
@@ -245,7 +256,7 @@ static inline void release_helper(int level, struct hnode * L, zm_mcs_qnode_t *I
     if (level == 1) {
         release_root(L, I);
     } else {
-        unsigned cur_count = zm_atomic_load(&(I->status), zm_memord_acquire) ;
+        unsigned cur_count = LOAD(&(I->status)) ;
         zm_mcs_qnode_t * succ;
 
         // Lower level releases
@@ -260,10 +271,10 @@ static inline void release_helper(int level, struct hnode * L, zm_mcs_qnode_t *I
             return;
         }
 
-        succ = (zm_mcs_qnode_t*)zm_atomic_load(&(I->next), zm_memord_acquire);
+        succ = (zm_mcs_qnode_t*)LOAD(&(I->next));
         // Not reached threshold
         if(succ) {
-            zm_atomic_store(&succ->status, cur_count + 1, zm_memord_release);
+            STORE(&succ->status, cur_count + 1);
             return; // released
         }
         // No known successor, so release
@@ -277,7 +288,7 @@ static inline int nowaiters_helper(int level, struct hnode * L, zm_mcs_qnode_t *
     if (level == 1 ) {
         return nowaiters_root(L,I);
     } else {
-        if(zm_atomic_load(&I->next, zm_memord_acquire) != ZM_NULL)
+        if(LOAD(&I->next) != ZM_NULL)
             return FALSE;
         else
             return nowaiters_helper(level - 1, L->parent, &(L->node));
