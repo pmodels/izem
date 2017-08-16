@@ -45,12 +45,27 @@
 #error "TRUE already defined"
 #endif
 
-#define handle_error_en(en, msg) \
-do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+struct hnode{
+    unsigned threshold __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    struct hnode * parent __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    zm_mcs_t lock __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    zm_mcs_qnode_t node __attribute__((aligned(ZM_CACHELINE_SIZE)));
 
-typedef struct hnode hnode_t;
-typedef struct leaf leaf_t;
-typedef struct lock lock_t;
+}__attribute__((aligned(ZM_CACHELINE_SIZE)));
+
+struct leaf{
+    struct hnode * cur_node;
+    struct hnode * root_node;
+    zm_mcs_qnode_t I;
+    int curDepth;
+    int took_fast_path;
+};
+
+struct lock{
+    // Assumes tids range from [0.. max_threads)
+    // Assumes that tid 0 is close to tid and so on.
+    struct leaf ** leaf_nodes __attribute__((aligned(ZM_CACHELINE_SIZE)));
+};
 
 static zm_thread_local int tid = -1;
 
@@ -86,7 +101,10 @@ static const int thread_mappings[] = {0 , 1 , 2 , 3};
 #error "Machine topology not recognized"
 #endif
 
-void set_affinity(int tid){
+#define handle_error_en(en, msg) \
+do { errno = en; perror(msg); exit(EXIT_FAILURE); } while (0)
+
+static void set_affinity(int tid){
     int s, j;
     cpu_set_t cpuset;
     pthread_t thread;
@@ -104,7 +122,7 @@ void set_affinity(int tid){
 }
 
 /* Check the actual affinity mask assigned to the thread */
-static inline void check_affinity(int tid) {
+static void check_affinity(int tid) {
     int s, j;
     cpu_set_t cpuset;
     pthread_t thread = pthread_self();
@@ -124,33 +142,21 @@ static inline void reuse_qnode(zm_mcs_qnode_t *I){
     zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
 }
 
-struct hnode{
-    unsigned threshold __attribute__((aligned(ZM_CACHELINE_SIZE)));
-    struct hnode * parent __attribute__((aligned(ZM_CACHELINE_SIZE)));
-    zm_mcs_t lock __attribute__((aligned(ZM_CACHELINE_SIZE)));
-    zm_mcs_qnode_t node __attribute__((aligned(ZM_CACHELINE_SIZE)));
-
-}__attribute__((aligned(ZM_CACHELINE_SIZE)));
-
-static inline void* hnode_new() {
-    void *storage = memalign(ZM_CACHELINE_SIZE, sizeof(hnode_t));
+static void* new_hnode() {
+    void *storage = memalign(ZM_CACHELINE_SIZE, sizeof(struct hnode));
     if (storage == NULL) {
-        printf("Memalign failed in HMCS : hnode_new \n");
+        printf("Memalign failed in HMCS : new_hnode \n");
         exit(EXIT_FAILURE);
     }
     return storage;
 }
 
 /* TODO: Macro or Template this for fast comprison */
-static inline unsigned get_threshold(hnode_t *L) {
+static inline unsigned get_threshold(struct hnode *L) {
     return L->threshold;
 }
 
-static inline void set_threshold(hnode_t *L, unsigned t) {
-    L->threshold = t;
-}
-
-static inline void normal_mcs_release_with_value(hnode_t * L, zm_mcs_qnode_t *I, unsigned val){
+static inline void normal_mcs_release_with_value(struct hnode * L, zm_mcs_qnode_t *I, unsigned val){
 
     zm_mcs_qnode_t *succ = (zm_mcs_qnode_t *)zm_atomic_load(&I->next, zm_memord_acquire);
     if(succ) {
@@ -170,7 +176,7 @@ static inline void normal_mcs_release_with_value(hnode_t * L, zm_mcs_qnode_t *I,
     return;
 }
 
-static inline void acquire_root(hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void acquire_root(struct hnode * L, zm_mcs_qnode_t *I) {
     // Prepare the node for use.
     reuse_qnode(I);
     zm_mcs_qnode_t *pred = (zm_mcs_qnode_t*) zm_atomic_exchange(&(L->lock), (zm_ptr_t)I, zm_memord_acq_rel);
@@ -186,8 +192,7 @@ static inline void acquire_root(hnode_t * L, zm_mcs_qnode_t *I) {
     return;
 }
 
-
-static inline void release_root(hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void release_root(struct hnode * L, zm_mcs_qnode_t *I) {
     // Top level release is usual MCS
     // At the top level MCS we always writr COHORT_START since
     // 1. It will release the lock
@@ -196,11 +201,11 @@ static inline void release_root(hnode_t * L, zm_mcs_qnode_t *I) {
     normal_mcs_release_with_value(L, I, COHORT_START);
 }
 
-static inline int no_waiters_root(hnode_t * L, zm_mcs_qnode_t *I) {
+static inline int nowaiters_root(struct hnode * L, zm_mcs_qnode_t *I) {
     return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
 }
 
-static inline void acquire_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void acquire_helper(int level, struct hnode * L, zm_mcs_qnode_t *I) {
     // Trivial case = root level
     if (level == 1)
         acquire_root(L, I);
@@ -235,12 +240,7 @@ static inline void acquire_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
     }
 }
 
-static inline void acquire(int level, hnode_t * L, zm_mcs_qnode_t *I) {
-    acquire_helper(level, L, I);
-    //FORCE_INS_ORDERING();
-}
-
-static inline void release_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
+static inline void release_helper(int level, struct hnode * L, zm_mcs_qnode_t *I) {
     // Trivial case = root level
     if (level == 1) {
         release_root(L, I);
@@ -268,53 +268,39 @@ static inline void release_helper(int level, hnode_t * L, zm_mcs_qnode_t *I) {
         }
         // No known successor, so release
         release_helper(level - 1, L->parent, &(L->node));
-        //COMMIT_ALL_WRITES();
         // Tap successor at this level and ask to spin acquire next level lock
         normal_mcs_release_with_value(L, I, ACQUIRE_PARENT);
     }
 }
 
-static inline void release(int level, hnode_t * L, zm_mcs_qnode_t *I) {
-    //COMMIT_ALL_WRITES();
-    release_helper(level, L, I);
-}
-
-static inline int no_waiters(int level, hnode_t * L, zm_mcs_qnode_t *I) {
+static inline int nowaiters_helper(int level, struct hnode * L, zm_mcs_qnode_t *I) {
     if (level == 1 ) {
-        return no_waiters_root(L,I);
+        return nowaiters_root(L,I);
     } else {
         if(zm_atomic_load(&I->next, zm_memord_acquire) != ZM_NULL)
             return FALSE;
         else
-            return no_waiters(level - 1, L->parent, &(L->node));
+            return nowaiters_helper(level - 1, L->parent, &(L->node));
     }
 }
 
-struct leaf{
-    hnode_t * cur_node;
-    hnode_t * root_node;
-    zm_mcs_qnode_t I;
-    int curDepth;
-    int took_fast_path;
-};
-
-static inline void* leaf_new(hnode_t *h, int depth) {
-    leaf_t *leaf = (leaf_t *)memalign(ZM_CACHELINE_SIZE, sizeof(leaf_t));
+static void* new_leaf(struct hnode *h, int depth) {
+    struct leaf *leaf = (struct leaf *)memalign(ZM_CACHELINE_SIZE, sizeof(struct leaf));
     if (leaf == NULL) {
-        printf("Memalign failed in HMCS : leaf_new \n");
+        printf("Memalign failed in HMCS : new_leaf \n");
         exit(EXIT_FAILURE);
     }
     leaf->cur_node = h;
     leaf->curDepth = depth;
     leaf->took_fast_path = FALSE;
-    hnode_t *tmp, *root_node;
+    struct hnode *tmp, *root_node;
     for(tmp = leaf->cur_node; tmp->parent != NULL; tmp = tmp->parent);
         root_node = tmp;
     leaf->root_node = root_node;
     return leaf;
 }
 
-static inline void leaf_acquire(leaf_t *L){
+static inline void acquire_from_leaf(struct leaf *L){
     if((zm_ptr_t)L->cur_node->lock == ZM_NULL
     && (zm_ptr_t)L->root_node->lock == ZM_NULL) {
         // go FP
@@ -322,37 +308,31 @@ static inline void leaf_acquire(leaf_t *L){
         acquire_root(L->root_node, &L->I);
         return;
     }
-    acquire(levels, L->cur_node, &L->I);
+    acquire_helper(levels, L->cur_node, &L->I);
     return;
 }
 
-static inline void leaf_release(leaf_t *L){
+static inline void release_from_leaf(struct leaf *L){
     //myrelease(cur_node, I);
     if(L->took_fast_path) {
         release_root(L->root_node, &L->I);
         L->took_fast_path = FALSE;
         return;
     }
-    release(levels, L->cur_node, &L->I);
+    release_helper(levels, L->cur_node, &L->I);
     return;
 }
 
-static inline int leaf_nowaiters(leaf_t *L){
-    // Shouldnt this be no_waiters(root_node, I)?
+static inline int nowaiters_from_leaf(struct leaf *L){
+    // Shouldnt this be nowaiters(root_node, I)?
     if(L->took_fast_path) {
-        return no_waiters_root(L->cur_node, &L->I);
+        return nowaiters_root(L->cur_node, &L->I);
     }
 
-    return no_waiters(levels, L->cur_node, &L->I);
+    return nowaiters_helper(levels, L->cur_node, &L->I);
 }
 
-struct lock{
-    // Assumes tids range from [0.. max_threads)
-    // Assumes that tid 0 is close to tid and so on.
-    leaf_t ** leaf_nodes __attribute__((aligned(ZM_CACHELINE_SIZE)));
-};
-
-int get_hwthread_id(int id){
+static int get_hwthread_id(int id){
    for(int i = 0 ; i < max_threads; i++)
        if(id == thread_mappings[i])
             return i;
@@ -360,9 +340,9 @@ int get_hwthread_id(int id){
    assert(0 && "Should never reach here");
 }
 
-static inline void* lock_new(){
+static void* new_lock(){
 
-    lock_t *L = (lock_t*)memalign(ZM_CACHELINE_SIZE, sizeof(lock_t));
+    struct lock *L = (struct lock*)memalign(ZM_CACHELINE_SIZE, sizeof(struct lock));
 
     // Total locks needed = participantsPerLevel[1] + participantsPerLevel[2] + .. participantsPerLevel[levels-1] + 1
     // Save affinity
@@ -376,8 +356,8 @@ static inline void* lock_new(){
     for (int i=0; i < levels; i++) {
         total_locks_needed += max_threads / participants_at_level[i] ;
     }
-    hnode_t ** lock_locations = (hnode_t**)memalign(ZM_CACHELINE_SIZE, sizeof(hnode_t*) * total_locks_needed);
-    leaf_t ** leaf_nodes = (leaf_t**)memalign(ZM_CACHELINE_SIZE, sizeof(leaf_t*) * max_threads);
+    struct hnode ** lock_locations = (struct hnode**)memalign(ZM_CACHELINE_SIZE, sizeof(struct hnode*) * total_locks_needed);
+    struct leaf ** leaf_nodes = (struct leaf**)memalign(ZM_CACHELINE_SIZE, sizeof(struct leaf*) * max_threads);
 
 
     for(int tid = 0 ; tid < max_threads; tid ++){
@@ -389,12 +369,11 @@ static inline void* lock_new(){
                 // master, initialize the lock
                 int lock_location = last_lock_location_end + tid/participants_at_level[cur_level];
                 last_lock_location_end += max_threads/participants_at_level[cur_level];
-                hnode_t * curLock = hnode_new();
-                //curLock->threshold = get_thresholdAtLevel(cur_level);
-                curLock->threshold = DEFAULT_THRESHOLD;
-                curLock->parent = NULL;
-                curLock->lock = ZM_NULL;
-                lock_locations[lock_location] = curLock;
+                struct hnode * cur_hnode = new_hnode();
+                cur_hnode->threshold = DEFAULT_THRESHOLD;
+                cur_hnode->parent = NULL;
+                cur_hnode->lock = ZM_NULL;
+                lock_locations[lock_location] = cur_hnode;
             }
         }
     }
@@ -411,7 +390,7 @@ static inline void* lock_new(){
                 lock_locations[lock_location]->parent = lock_locations[parentLockLocation];
             }
         }
-        leaf_nodes[tid] = (leaf_t*)leaf_new(lock_locations[tid/participants_at_level[0]], levels);
+        leaf_nodes[tid] = (struct leaf*)new_leaf(lock_locations[tid/participants_at_level[0]], levels);
     }
     free(lock_locations);
     // Restore affinity
@@ -421,37 +400,37 @@ static inline void* lock_new(){
     return L;
 }
 
-static inline void hmcs_acquire(lock_t *L){
+static inline void hmcs_acquire(struct lock *L){
     if (zm_unlikely(tid == -1)) {
         tid = sched_getcpu();
         check_affinity(tid);
         tid = get_hwthread_id(tid);
     }
-    leaf_acquire(L->leaf_nodes[tid]);
+    acquire_from_leaf(L->leaf_nodes[tid]);
 }
 
-static inline void hmcs_release(lock_t *L){
-    leaf_release(L->leaf_nodes[tid]);
+static inline void hmcs_release(struct lock *L){
+    release_from_leaf(L->leaf_nodes[tid]);
 }
 
-static inline int hmcs_nowaiters(lock_t *L){
-    return leaf_nowaiters(L->leaf_nodes[tid]);
+static inline int hmcs_nowaiters(struct lock *L){
+    return nowaiters_from_leaf(L->leaf_nodes[tid]);
 }
 
 
 int zm_hmcs_init(zm_hmcs_t * handle) {
-    *handle  = (zm_hmcs_t) lock_new();
+    *handle  = (zm_hmcs_t) new_lock();
     return 0;
 }
 
 int zm_hmcs_acquire(zm_hmcs_t L){
-    hmcs_acquire((lock_t*)L);
+    hmcs_acquire((struct lock*)L);
     return 0;
 }
 int zm_hmcs_release(zm_hmcs_t L){
-    hmcs_release((lock_t*)L);
+    hmcs_release((struct lock*)L);
     return 0;
 }
 int zm_hmcs_nowaiters(zm_hmcs_t L){
-    return hmcs_nowaiters((lock_t*)L);
+    return hmcs_nowaiters((struct lock*)L);
 }
