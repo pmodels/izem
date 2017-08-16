@@ -19,6 +19,7 @@
  * p. 22. ACM, 2016.
  */
 
+#define _GNU_SOURCE
 #include <stdlib.h>
 #include <assert.h>
 #include <malloc.h>
@@ -283,7 +284,7 @@ inline static int no_waiters(int level, hnode_t * L, zm_mcs_qnode_t *I) {
         return no_waiters_root(L,I);
     } else {
         if(zm_atomic_load(&I->next, zm_memord_acquire) != ZM_NULL)
-            return false;
+            return FALSE;
         else
             return no_waiters(level - 1, L->parent, &(L->node));
     }
@@ -375,7 +376,7 @@ static inline void* lock_new(){
     for (int i=0; i < levels; i++) {
         total_locks_needed += max_threads / participants_at_level[i] ;
     }
-    hnode ** lock_locations = (hnode**)memalign(ZM_CACHELINE_SIZE, sizeof(hnode*) * total_locks_needed);
+    hnode_t ** lock_locations = (hnode_t**)memalign(ZM_CACHELINE_SIZE, sizeof(hnode_t*) * total_locks_needed);
     leaf_t ** leaf_nodes = (leaf_t**)memalign(ZM_CACHELINE_SIZE, sizeof(leaf_t*) * max_threads);
 
 
@@ -388,7 +389,7 @@ static inline void* lock_new(){
                 // master, initialize the lock
                 int lock_location = last_lock_location_end + tid/participants_at_level[cur_level];
                 last_lock_location_end += max_threads/participants_at_level[cur_level];
-                hnode_t * curLock = new hnode();
+                hnode_t * curLock = hnode_new();
                 //curLock->threshold = get_thresholdAtLevel(cur_level);
                 curLock->threshold = DEFAULT_THRESHOLD;
                 curLock->parent = NULL;
@@ -433,11 +434,10 @@ static inline void hmcs_release(lock_t *L){
     leaf_release(L->leaf_nodes[tid]);
 }
 
-inline int hmcs_nowaiters(lock_t *L){
+static inline int hmcs_nowaiters(lock_t *L){
     return leaf_nowaiters(L->leaf_nodes[tid]);
 }
 
-extern "C" {
 
 int zm_hmcs_init(zm_hmcs_t * handle) {
     *handle  = (zm_hmcs_t) lock_new();
@@ -454,6 +454,4 @@ int zm_hmcs_release(zm_hmcs_t L){
 }
 int zm_hmcs_nowaiters(zm_hmcs_t L){
     return hmcs_nowaiters((lock_t*)L);
-}
-
 }
