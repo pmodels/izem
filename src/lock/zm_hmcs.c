@@ -27,7 +27,9 @@
 #include <pthread.h>
 #include "lock/zm_lock_types.h"
 
+#ifndef DEFAULT_THRESHOLD
 #define DEFAULT_THRESHOLD 256
+#endif
 
 #define WAIT (0xffffffff)
 #define COHORT_START (0x1)
@@ -370,6 +372,10 @@ static void* new_lock(){
     struct hnode ** lock_locations = (struct hnode**)memalign(ZM_CACHELINE_SIZE, sizeof(struct hnode*) * total_locks_needed);
     struct leaf ** leaf_nodes = (struct leaf**)memalign(ZM_CACHELINE_SIZE, sizeof(struct leaf*) * max_threads);
 
+    int threshold = DEFAULT_THRESHOLD;
+    char *s = getenv("ZM_HMCS_THRESHOLD");
+    if (s != NULL)
+        threshold = atoi(s);
 
     for(int tid = 0 ; tid < max_threads; tid ++){
         set_affinity(thread_mappings[tid]);
@@ -381,7 +387,7 @@ static void* new_lock(){
                 int lock_location = last_lock_location_end + tid/participants_at_level[cur_level];
                 last_lock_location_end += max_threads/participants_at_level[cur_level];
                 struct hnode * cur_hnode = new_hnode();
-                cur_hnode->threshold = DEFAULT_THRESHOLD;
+                cur_hnode->threshold = threshold;
                 cur_hnode->parent = NULL;
                 cur_hnode->lock = ZM_NULL;
                 lock_locations[lock_location] = cur_hnode;
