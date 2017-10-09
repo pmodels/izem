@@ -19,7 +19,9 @@
  * p. 22. ACM, 2016.
  */
 
+#if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
+#endif
 #include <stdlib.h>
 #include <assert.h>
 #include <malloc.h>
