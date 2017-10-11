@@ -321,24 +321,24 @@ static void set_hierarchy(struct lock *L, int *max_threads, int** particip_per_l
     *max_threads = hwloc_get_nbobjs_by_type(L->topo, HWLOC_OBJ_PU);
 
     max_depth = hwloc_topology_get_depth(L->topo);
-    int nobjs_per_level[max_depth];
+    assert(max_depth >= 2); /* At least Machine and Core levels exist */
 
+    *particip_per_level = (int*) malloc(max_levels * sizeof(int));
     int prev_nobjs = -1;
-    for (int d = max_depth - 1; d > 0; d--) {
+    int d;
+    for (d = max_depth - 2; d > 1; d--) {
         int cur_nobjs = hwloc_get_nbobjs_by_depth(L->topo, d);
         /* Check if this level has a hierarchical impact */
         if(cur_nobjs != prev_nobjs) {
             prev_nobjs = cur_nobjs;
-            nobjs_per_level[levels] = cur_nobjs;
+            (*particip_per_level)[levels] = (*max_threads)/cur_nobjs;
             levels++;
-            if(levels >= max_levels)
+            if(levels >= max_levels - 1)
                 break;
         }
     }
-
-    *particip_per_level = (int*) malloc(levels * sizeof(int));
-    for(int level = 0; level < levels; level++)
-        (*particip_per_level)[level] = nobjs_per_level[levels - (level + 1)];
+    (*particip_per_level)[levels] = *max_threads;
+    levels++;
 
     L->levels = levels;
 }
