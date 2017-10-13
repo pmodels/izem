@@ -268,6 +268,18 @@ esac
 AC_SUBST(ZM_TLP_HIGH_P)
 AC_SUBST(ZM_TLP_LOW_P)
 
+AC_ARG_WITH([hwloc],
+            [AS_HELP_STRING([--with-hwloc], [Set path to hwloc. Default: auto detect.])],
+            [LIBS="$LIBS -L$with_hwloc/lib"
+             CFLAGS="$CFLAGS -I$with_hwloc/include"],
+            [])
+
+AC_CHECK_LIB(hwloc,
+             hwloc_topology_init,
+             [],
+             AC_MSG_FAILURE([Could not find hwloc. Set the path to hwloc using --with-hwloc]),
+             [])
+
 AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.11.3 subdir-objects])
 
 AM_SILENT_RULES([yes])
