@@ -268,6 +268,30 @@ esac
 AC_SUBST(ZM_TLP_HIGH_P)
 AC_SUBST(ZM_TLP_LOW_P)
 
+# Default cond var interface
+
+AC_ARG_WITH([cond_if],
+[  --with-cond-if@<:@=COND_IF@:>@   define the default condition variable
+                          interface being exposed by Izem (i.e., zm_cond_t
+                          and associated routines. COND_IF represents the
+                          name of the underlying condition variable to be
+                          used. Possible values are:
+                          ccond  - CAS-based spinning
+],,
+[with_cond_if=ccond])
+
+case "$with_cond_if" in
+    ccond)
+        ZM_COND_IF=ZM_CCOND_IF
+    ;;
+    *)
+        AC_MSG_WARN([Unknown value $with_cond_if for with-cond-if])
+    ;;
+esac
+
+AC_SUBST(ZM_COND_IF)
+
+
 AC_ARG_WITH([hwloc],
             [AS_HELP_STRING([--with-hwloc], [Set path to hwloc. Default: auto detect.])],
             [LIBS="$LIBS -L$with_hwloc/lib"
@@ -315,6 +339,7 @@ AC_CONFIG_FILES([Makefile
                  src/include/common/zm_common.h
                  src/include/lock/zm_lock.h
                  src/include/lock/zm_lock_types.h
+                 src/include/cond/zm_cond.h
                  test/Makefile
                  test/regres/Makefile
                  test/regres/lock/Makefile
