@@ -14,12 +14,21 @@ int zm_ccond_init(struct zm_ccond *C)
     return 0;
 }
 
-int zm_ccond_wait(struct zm_ccond *C, zm_lock_t *L, zm_lock_ctxt_t *ctxt) {
+int zm_ccond_wait(struct zm_ccond *C, zm_lock_t *L) {
     zm_atomic_store(&C->flag, ZM_COND_WAIT, zm_memord_release);
-    zm_lock_release(L, ctxt);
+    zm_lock_release(L);
     while(zm_atomic_load(&C->flag, zm_memord_acquire) == ZM_COND_WAIT)
         ; /* SPIN */
-    zm_lock_acquire(L, ctxt);
+    zm_lock_acquire(L);
+   return 0;
+}
+
+int zm_ccond_wait_c(struct zm_ccond *C, zm_lock_t *L, zm_lock_ctxt_t *ctxt) {
+    zm_atomic_store(&C->flag, ZM_COND_WAIT, zm_memord_release);
+    zm_lock_release_c(L, ctxt);
+    while(zm_atomic_load(&C->flag, zm_memord_acquire) == ZM_COND_WAIT)
+        ; /* SPIN */
+    zm_lock_acquire_c(L, ctxt);
    return 0;
 }
 

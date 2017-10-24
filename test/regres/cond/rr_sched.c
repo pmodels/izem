@@ -27,20 +27,18 @@ zm_lock_t glock;
 static void* run(void *arg) {
     int tid = (intptr_t) arg;
     int iter;
-    zm_lock_ctxt_t *my_ctx __attribute__ ((unused));
-    my_ctx = (zm_lock_ctxt_t*) malloc (sizeof(zm_lock_ctxt_t));
     for(iter=0; iter<TEST_NITER; iter++) {
-        zm_lock_acquire(&glock, my_ctx);
+        zm_lock_acquire(&glock);
         do {
             if (counter == tid) {
                 counter = (counter + 1) % TEST_NTHREADS;
                 zm_cond_signal(&cond_vars[(tid + 1) % TEST_NTHREADS]);
                 break;
             } else {
-                zm_cond_wait(&cond_vars[tid], &glock, my_ctx);
+                zm_cond_wait(&cond_vars[tid], &glock);
             }
         } while (1);
-        zm_lock_release(&glock, my_ctx);   /* Release the lock */
+        zm_lock_release(&glock);   /* Release the lock */
     }
     return 0;
 }

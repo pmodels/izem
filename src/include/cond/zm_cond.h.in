@@ -18,7 +18,8 @@
 #define zm_cond_t                   struct zm_ccond
 /* routines */
 #define zm_cond_init(C)             zm_ccond_init(C)
-#define zm_cond_wait(C, L, ctxt)    zm_ccond_wait(C, L, ctxt)
+#define zm_cond_wait(C, L)          zm_ccond_wait(C, L)
+#define zm_cond_wait_c(C, L, ctxt)  zm_ccond_wait(C, L, ctxt)
 #define zm_cond_signal(C)           zm_ccond_signal(C)
 #define zm_cond_bcast(C)            zm_ccond_bcast(C)
 

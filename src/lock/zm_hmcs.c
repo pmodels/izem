@@ -19,15 +19,6 @@
  * p. 22. ACM, 2016.
  */
 
-#if !defined(_GNU_SOURCE)
-#define _GNU_SOURCE
-#endif
-#include <stdlib.h>
-#include <assert.h>
-#include <malloc.h>
-#include <errno.h>
-#include <pthread.h>
-#include <hwloc.h>
 #include "lock/zm_lock_types.h"
 
 #ifndef DEFAULT_THRESHOLD
@@ -72,7 +63,7 @@
 struct hnode{
     unsigned threshold __attribute__((aligned(ZM_CACHELINE_SIZE)));
     struct hnode * parent __attribute__((aligned(ZM_CACHELINE_SIZE)));
-    zm_mcs_t lock __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    zm_atomic_ptr_t lock __attribute__((aligned(ZM_CACHELINE_SIZE)));
     zm_mcs_qnode_t node __attribute__((aligned(ZM_CACHELINE_SIZE)));
 
 }__attribute__((aligned(ZM_CACHELINE_SIZE)));

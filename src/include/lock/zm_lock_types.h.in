@@ -6,6 +6,15 @@
 #ifndef _ZM_LOCK_TYPES_H
 #define _ZM_LOCK_TYPES_H
 
+#if !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
+#include <stdlib.h>
+#include <assert.h>
+#include <malloc.h>
+#include <errno.h>
+#include <pthread.h>
+#include <hwloc.h>
 #include "common/zm_common.h"
 
 #define ZM_LOCKED 1
@@ -19,12 +28,17 @@ struct zm_ticket {
 };
 
 /* MCS */
-typedef zm_atomic_ptr_t zm_mcs_t;
+typedef struct zm_mcs zm_mcs_t;
 typedef struct zm_mcs_qnode zm_mcs_qnode_t;
-
 struct zm_mcs_qnode {
     zm_atomic_uint_t status;
     zm_atomic_ptr_t next;
+};
+
+struct zm_mcs {
+    zm_atomic_ptr_t lock;
+    struct zm_mcs_qnode *local_nodes;
+    hwloc_topology_t topo;
 };
 
 /* Context Saving MCS */

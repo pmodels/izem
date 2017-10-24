@@ -6,6 +6,11 @@
 #include "zm_ticket.h"
 
 int zm_mcsp_init(zm_mcsp_t *);
-int zm_mcsp_acquire(zm_mcsp_t *, zm_mcs_qnode_t*);
-int zm_mcsp_acquire_low(zm_mcsp_t*, zm_mcs_qnode_t*);
-int zm_mcsp_release(zm_mcsp_t *, zm_mcs_qnode_t *);
+
+int zm_mcsp_acquire(zm_mcsp_t *);
+int zm_mcsp_acquire_low(zm_mcsp_t*);
+int zm_mcsp_release(zm_mcsp_t *);
+
+int zm_mcsp_acquire_c(zm_mcsp_t *, zm_mcs_qnode_t*);
+int zm_mcsp_acquire_low_c(zm_mcsp_t*, zm_mcs_qnode_t*);
+int zm_mcsp_release_c(zm_mcsp_t *, zm_mcs_qnode_t *);
