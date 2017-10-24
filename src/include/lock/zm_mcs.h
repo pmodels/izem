@@ -8,6 +8,7 @@
 #include "lock/zm_lock_types.h"
 
 int zm_mcs_init(zm_mcs_t *);
+int zm_mcs_destroy(zm_mcs_t *);
 
 int zm_mcs_acquire(zm_mcs_t *);
 int zm_mcs_release(zm_mcs_t *);

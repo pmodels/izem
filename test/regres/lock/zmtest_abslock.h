@@ -9,6 +9,7 @@
 #define zm_abslock_t                   zm_ticket_t
 #define zm_abslock_localctx_t              int /*dummy*/
 #define zm_abslock_init(global_lock)             zm_ticket_init(global_lock)
+#define zm_abslock_destroy(global_lock)          zm_ticket_destroy(global_lock)
 /* Context-less routines */
 #define zm_abslock_acquire(global_lock)          zm_ticket_acquire(global_lock)
 #define zm_abslock_acquire_l(global_lock)        zm_ticket_acquire(global_lock)
@@ -24,6 +25,7 @@
 #define zm_abslock_t                   zm_mcs_t
 #define zm_abslock_localctx_t          zm_mcs_qnode_t
 #define zm_abslock_init                zm_mcs_init
+#define zm_abslock_destroy             zm_mcs_destroy
 /* Context-less routines */
 #define zm_abslock_acquire(global_lock)          zm_mcs_acquire(global_lock)
 #define zm_abslock_acquire_l(global_lock)        zm_mcs_acquire(global_lock)
@@ -39,6 +41,7 @@
 #define zm_abslock_t                   zm_tlp_t
 #define zm_abslock_localctx_t          zm_mcs_qnode_t
 #define zm_abslock_init                zm_tlp_init
+#define zm_abslock_destroy             zm_tlp_destroy
 /* Context-less routines */
 #define zm_abslock_acquire(global_lock)    zm_tlp_acquire(global_lock)
 #define zm_abslock_acquire_l(global_lock)  zm_tlp_acquire_low(global_lock)
@@ -52,8 +55,9 @@
 #include <lock/zm_hmcs.h>
 /* types */
 #define zm_abslock_t                   zm_hmcs_t
-#define zm_abslock_localctx_t              int /*dummy*/
+#define zm_abslock_localctx_t          int /*dummy*/
 #define zm_abslock_init                zm_hmcs_init
+#define zm_abslock_destroy                       zm_hmcs_destroy
 /* Context-less routines */
 #define zm_abslock_acquire(global_lock)          zm_hmcs_acquire(*(global_lock))
 #define zm_abslock_acquire_l(global_lock)        zm_hmcs_acquire(*(global_lock))

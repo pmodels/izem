@@ -52,3 +52,8 @@ int zm_mmcs_nowaiters(zm_mmcs_t *L) {
     zm_mcs_qnode_t *I = L->cur_ctx;
     return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
 }
+
+int zm_mmcs_destroy(zm_mmcs_t *L)
+{
+    return 0;
+}

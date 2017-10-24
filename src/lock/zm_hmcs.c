@@ -406,7 +406,46 @@ static void* new_lock(){
     hwloc_set_cpubind(L->topo, cpuset, HWLOC_CPUBIND_THREAD);
     L->leaf_nodes = leaf_nodes;
 
+    hwloc_bitmap_free(cpuset);
+
     return L;
+}
+
+static void search_nodes_rec(struct hnode *node, struct hnode **nodes_to_free, int *num_ptrs, int max_threads) {
+    int i;
+    if(node->parent != NULL) {
+        search_nodes_rec(node->parent, nodes_to_free, num_ptrs, max_threads);
+        for(i = 0; i < *num_ptrs; i++) {
+            if(node->parent == nodes_to_free[i])
+                break; /* already marked to be free'd */
+        }
+        if(i == *num_ptrs) { /* newly encountered pointer */
+            nodes_to_free[*num_ptrs] = node->parent;
+            (*num_ptrs)++;
+            assert(*num_ptrs < 2*max_threads);
+        }
+        node->parent = NULL;
+    }
+}
+
+static void free_lock(struct lock* L) {
+    int max_threads = hwloc_get_nbobjs_by_type(L->topo, HWLOC_OBJ_PU);
+    int num_ptrs = 0;
+    struct hnode **nodes_to_free = (struct hnode**) malloc(2*max_threads*sizeof(struct hnode*));
+    for (int tid = 0; tid < max_threads; tid++) {
+        nodes_to_free[num_ptrs] = L->leaf_nodes[tid]->cur_node;
+        num_ptrs++;
+        assert(num_ptrs < 2*max_threads);
+        search_nodes_rec(L->leaf_nodes[tid]->cur_node, nodes_to_free, &num_ptrs, max_threads);
+        free(L->leaf_nodes[tid]);
+    }
+    free(L->leaf_nodes);
+    printf("num_ptrs %d\n", num_ptrs);
+    for(int i = 0; i < num_ptrs; i++)
+        free(nodes_to_free[i]);
+    free(nodes_to_free);
+    hwloc_topology_destroy(L->topo);
+    free(L);
 }
 
 static inline void hmcs_acquire(struct lock *L){
@@ -425,9 +464,13 @@ static inline int hmcs_nowaiters(struct lock *L){
     return nowaiters_from_leaf(L->levels, L->leaf_nodes[tid]);
 }
 
-
 int zm_hmcs_init(zm_hmcs_t * handle) {
     *handle  = (zm_hmcs_t) new_lock();
+    return 0;
+}
+
+int zm_hmcs_destroy(zm_hmcs_t *L) {
+    free_lock((struct lock*)(*L));
     return 0;
 }
 
@@ -442,3 +485,4 @@ int zm_hmcs_release(zm_hmcs_t L){
 int zm_hmcs_nowaiters(zm_hmcs_t L){
     return hmcs_nowaiters((struct lock*)L);
 }
+

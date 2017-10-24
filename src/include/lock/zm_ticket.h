@@ -8,6 +8,7 @@
 #include "lock/zm_lock_types.h"
 
 int zm_ticket_init(zm_ticket_t *);
+int zm_ticket_destroy(zm_ticket_t *);
 int zm_ticket_acquire(zm_ticket_t*);
 int zm_ticket_release(zm_ticket_t*);
 int zm_ticket_nowaiters(zm_ticket_t*);

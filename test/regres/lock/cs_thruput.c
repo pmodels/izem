@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <zmtest_abslock.h>
 
-#define TEST_NTHREADS 4
+#define TEST_NTHREADS 1
 #define TEST_NITER 1000
 
 char cache_lines[640] = {0};
@@ -55,9 +55,12 @@ static void test_lock_thruput() {
         CPU_SET(th, &cpuset);
         pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
         pthread_create(&threads[th], &attr, run, (void*) &lock);
+        pthread_attr_destroy(&attr);
     }
     for (th=0; th<TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
+
+    zm_abslock_destroy(&lock);
 
     printf("Pass\n");
 

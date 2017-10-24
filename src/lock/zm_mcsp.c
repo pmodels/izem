@@ -76,3 +76,10 @@ int zm_mcsp_release_c(zm_mcsp_t *L, zm_mcs_qnode_t *I) {
     }
     return 0;
 }
+
+int zm_mcsp_destroy(zm_mcsp_t *L) {
+    zm_mcs_destroy(&L->high_p);
+    zm_ticket_destroy(&L->filter);
+    zm_mcs_destroy(&L->low_p);
+    return 0;
+}

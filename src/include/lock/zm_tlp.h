@@ -16,6 +16,7 @@
 #endif
 
 int zm_tlp_init(zm_tlp_t *);
+int zm_tlp_destroy(zm_tlp_t *);
 
 int zm_tlp_acquire(zm_tlp_t* lock);
 int zm_tlp_acquire_low(zm_tlp_t* lock);

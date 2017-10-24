@@ -114,3 +114,10 @@ int zm_mcs_release_c(zm_mcs_t *L, zm_mcs_qnode_t *I) {
 int zm_mcs_nowaiters_c(zm_mcs_t *L, zm_mcs_qnode_t *I) {
     return nowaiters_c(L, I);
 }
+
+int zm_mcs_destroy(zm_mcs_t *L)
+{
+    free(L->local_nodes);
+    hwloc_topology_destroy(L->topo);
+    return 0;
+}

@@ -53,6 +53,14 @@ unlock(low_p)
 #endif
 
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
+#define zm_tlp_destroy_high_p(L) zm_ticket_destroy(&L->high_p)
+#elif (ZM_TLP_HIGH_P == ZM_MCS)
+#define zm_tlp_destroy_high_p(L) zm_mcs_destroy(&L->high_p)
+#elif (ZM_TLP_HIGH_P == ZM_HMCS)
+#define zm_tlp_destroy_high_p(L) zm_hmcs_destroy(&L->high_p)
+#endif
+
+#if (ZM_TLP_HIGH_P == ZM_TICKET)
 #define zm_tlp_acquire_high_p(L)              zm_ticket_acquire(&L->high_p)
 #define zm_tlp_acquire_high_pc(L, local_ctxt) zm_ticket_acquire(&L->high_p)
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
@@ -80,6 +88,14 @@ unlock(low_p)
 #define zm_tlp_init_low_p(L) zm_mcs_init(&L->low_p)
 #elif (ZM_TLP_LOW_P == ZM_HMCS)
 #define zm_tlp_init_low_p(L) zm_hmcs_init(&L->low_p)
+#endif
+
+#if (ZM_TLP_LOW_P == ZM_TICKET)
+#define zm_tlp_destroy_low_p(L) zm_ticket_destroy(&L->low_p)
+#elif (ZM_TLP_LOW_P == ZM_MCS)
+#define zm_tlp_destroy_low_p(L) zm_mcs_destroy(&L->low_p)
+#elif (ZM_TLP_LOW_P == ZM_HMCS)
+#define zm_tlp_destroy_low_p(L) zm_hmcs_destroy(&L->low_p)
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
@@ -122,6 +138,14 @@ int zm_tlp_init(zm_tlp_t *L)
    L->low_p_acq = 0;
    zm_ticket_init(&L->filter);
    zm_tlp_init_low_p(L);
+   return 0;
+}
+
+int zm_tlp_destroy(zm_tlp_t *L)
+{
+   zm_tlp_destroy_high_p(L);
+   zm_ticket_destroy(&L->filter);
+   zm_tlp_destroy_low_p(L);
    return 0;
 }
 

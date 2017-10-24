@@ -6,6 +6,7 @@
 #include "zm_ticket.h"
 
 int zm_mcsp_init(zm_mcsp_t *);
+int zm_mcsp_destroy(zm_mcsp_t *);
 
 int zm_mcsp_acquire(zm_mcsp_t *);
 int zm_mcsp_acquire_low(zm_mcsp_t*);
