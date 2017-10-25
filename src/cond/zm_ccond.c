@@ -14,6 +14,11 @@ int zm_ccond_init(struct zm_ccond *C)
     return 0;
 }
 
+int zm_ccond_destroy(struct zm_ccond *C)
+{
+    return 0;
+}
+
 int zm_ccond_wait(struct zm_ccond *C, zm_lock_t *L) {
     zm_atomic_store(&C->flag, ZM_COND_WAIT, zm_memord_release);
     zm_lock_release(L);

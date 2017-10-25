@@ -64,6 +64,10 @@ static void test_rr_sched() {
     for (th=0; th<TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
 
+    zm_lock_destroy(&glock);
+    for (int i = 0; i < TEST_NTHREADS; i++)
+        zm_cond_destroy(&cond_vars[i]);
+
     printf("Pass\n");
 
 } /* end test_lock_thruput() */
