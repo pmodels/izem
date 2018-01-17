@@ -413,18 +413,17 @@ static void* new_lock(){
 
 static void search_nodes_rec(struct hnode *node, struct hnode **nodes_to_free, int *num_ptrs, int max_threads) {
     int i;
-    if(node->parent != NULL) {
-        search_nodes_rec(node->parent, nodes_to_free, num_ptrs, max_threads);
+    if(node != NULL) {
         for(i = 0; i < *num_ptrs; i++) {
-            if(node->parent == nodes_to_free[i])
+            if(node == nodes_to_free[i])
                 break; /* already marked to be free'd */
         }
         if(i == *num_ptrs) { /* newly encountered pointer */
-            nodes_to_free[*num_ptrs] = node->parent;
+            nodes_to_free[*num_ptrs] = node;
             (*num_ptrs)++;
             assert(*num_ptrs < 2*max_threads);
         }
-        node->parent = NULL;
+        search_nodes_rec(node->parent, nodes_to_free, num_ptrs, max_threads);
     }
 }
 
@@ -433,14 +432,10 @@ static void free_lock(struct lock* L) {
     int num_ptrs = 0;
     struct hnode **nodes_to_free = (struct hnode**) malloc(2*max_threads*sizeof(struct hnode*));
     for (int tid = 0; tid < max_threads; tid++) {
-        nodes_to_free[num_ptrs] = L->leaf_nodes[tid]->cur_node;
-        num_ptrs++;
-        assert(num_ptrs < 2*max_threads);
         search_nodes_rec(L->leaf_nodes[tid]->cur_node, nodes_to_free, &num_ptrs, max_threads);
         free(L->leaf_nodes[tid]);
     }
     free(L->leaf_nodes);
-    printf("num_ptrs %d\n", num_ptrs);
     for(int i = 0; i < num_ptrs; i++)
         free(nodes_to_free[i]);
     free(nodes_to_free);
