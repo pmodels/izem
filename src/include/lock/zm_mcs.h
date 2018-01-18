@@ -10,13 +10,13 @@
 int zm_mcs_init(zm_mcs_t *);
 int zm_mcs_destroy(zm_mcs_t *);
 
-int zm_mcs_acquire(zm_mcs_t *);
-int zm_mcs_release(zm_mcs_t *);
-int zm_mcs_nowaiters(zm_mcs_t *);
+int zm_mcs_acquire(zm_mcs_t);
+int zm_mcs_release(zm_mcs_t);
+int zm_mcs_nowaiters(zm_mcs_t);
 
-int zm_mcs_acquire_c(zm_mcs_t *, zm_mcs_qnode_t*);
-int zm_mcs_release_c(zm_mcs_t *, zm_mcs_qnode_t*);
-int zm_mcs_nowaiters_c(zm_mcs_t *, zm_mcs_qnode_t *);
+int zm_mcs_acquire_c(zm_mcs_t, zm_mcs_qnode_t*);
+int zm_mcs_release_c(zm_mcs_t, zm_mcs_qnode_t*);
+int zm_mcs_nowaiters_c(zm_mcs_t, zm_mcs_qnode_t *);
 
 
 #endif /* _ZM_MCS_H */

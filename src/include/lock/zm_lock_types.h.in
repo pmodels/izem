@@ -14,7 +14,6 @@
 #include <malloc.h>
 #include <errno.h>
 #include <pthread.h>
-#include <hwloc.h>
 #include "common/zm_common.h"
 
 #define ZM_LOCKED 1
@@ -28,18 +27,13 @@ struct zm_ticket {
 };
 
 /* MCS */
-typedef struct zm_mcs zm_mcs_t;
+typedef zm_ptr_t zm_mcs_t;
 typedef struct zm_mcs_qnode zm_mcs_qnode_t;
 struct zm_mcs_qnode {
     zm_atomic_uint_t status;
     zm_atomic_ptr_t next;
 };
 
-struct zm_mcs {
-    zm_atomic_ptr_t lock;
-    struct zm_mcs_qnode *local_nodes;
-    hwloc_topology_t topo;
-};
 
 /* Context Saving MCS */
 typedef struct zm_mmcs zm_mmcs_t;

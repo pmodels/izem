@@ -16,7 +16,7 @@ int zm_mcsp_init(zm_mcsp_t *L) {
 }
 
 int zm_mcsp_acquire(zm_mcsp_t *L) {
-    zm_mcs_acquire(&L->high_p);
+    zm_mcs_acquire(L->high_p);
     if (!L->go_straight) {
         zm_ticket_acquire(&L->filter);
         L->go_straight = 1;
@@ -25,7 +25,7 @@ int zm_mcsp_acquire(zm_mcsp_t *L) {
 }
 
 int zm_mcsp_acquire_low(zm_mcsp_t *L) {
-    zm_mcs_acquire(&L->low_p);
+    zm_mcs_acquire(L->low_p);
     zm_ticket_acquire(&L->filter);
     L->low_p_acq = 1;
     return 0;
@@ -33,21 +33,21 @@ int zm_mcsp_acquire_low(zm_mcsp_t *L) {
 
 int zm_mcsp_release(zm_mcsp_t *L) {
     if (!L->low_p_acq) {
-        if (zm_mcs_nowaiters(&L->high_p)) {
+        if (zm_mcs_nowaiters(L->high_p)) {
             L->go_straight = 0;
             zm_ticket_release(&L->filter);
         }
-        zm_mcs_release(&L->high_p);
+        zm_mcs_release(L->high_p);
     } else {
         L->low_p_acq = 0;
         zm_ticket_release(&L->filter);
-        zm_mcs_release(&L->low_p);
+        zm_mcs_release(L->low_p);
     }
     return 0;
 }
 
 int zm_mcsp_acquire_c(zm_mcsp_t *L, zm_mcs_qnode_t* I) {
-    zm_mcs_acquire_c(&L->high_p, I);
+    zm_mcs_acquire_c(L->high_p, I);
     if (!L->go_straight) {
         zm_ticket_acquire(&L->filter);
         L->go_straight = 1;
@@ -56,7 +56,7 @@ int zm_mcsp_acquire_c(zm_mcsp_t *L, zm_mcs_qnode_t* I) {
 }
 
 int zm_mcsp_acquire_low_c(zm_mcsp_t *L, zm_mcs_qnode_t* I) {
-    zm_mcs_acquire_c(&L->low_p, I);
+    zm_mcs_acquire_c(L->low_p, I);
     zm_ticket_acquire(&L->filter);
     L->low_p_acq = 1;
     return 0;
@@ -64,15 +64,15 @@ int zm_mcsp_acquire_low_c(zm_mcsp_t *L, zm_mcs_qnode_t* I) {
 
 int zm_mcsp_release_c(zm_mcsp_t *L, zm_mcs_qnode_t *I) {
     if (!L->low_p_acq) {
-        if (zm_mcs_nowaiters_c(&L->high_p, I)) {
+        if (zm_mcs_nowaiters_c(L->high_p, I)) {
             L->go_straight = 0;
             zm_ticket_release(&L->filter);
         }
-        zm_mcs_release_c(&L->high_p, I);
+        zm_mcs_release_c(L->high_p, I);
     } else {
         L->low_p_acq = 0;
         zm_ticket_release(&L->filter);
-        zm_mcs_release_c(&L->low_p, I);
+        zm_mcs_release_c(L->low_p, I);
     }
     return 0;
 }

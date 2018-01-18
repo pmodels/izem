@@ -27,13 +27,13 @@
 #define zm_abslock_init                zm_mcs_init
 #define zm_abslock_destroy             zm_mcs_destroy
 /* Context-less routines */
-#define zm_abslock_acquire(global_lock)          zm_mcs_acquire(global_lock)
-#define zm_abslock_acquire_l(global_lock)        zm_mcs_acquire(global_lock)
-#define zm_abslock_release(global_lock)          zm_mcs_release(global_lock)
+#define zm_abslock_acquire(global_lock)          zm_mcs_acquire(*(global_lock))
+#define zm_abslock_acquire_l(global_lock)        zm_mcs_acquire(*(global_lock))
+#define zm_abslock_release(global_lock)          zm_mcs_release(*(global_lock))
 /* Context-full routines */
-#define zm_abslock_acquire_c(global_lock, local_context)  zm_mcs_acquire_c(global_lock, local_context)
-#define zm_abslock_acquire_lc(global_lock, local_context) zm_mcs_acquire_c(global_lock, local_context)
-#define zm_abslock_release_c(global_lock, local_context)  zm_mcs_release_c(global_lock, local_context)
+#define zm_abslock_acquire_c(global_lock, local_context)  zm_mcs_acquire_c(*(global_lock), local_context)
+#define zm_abslock_acquire_lc(global_lock, local_context) zm_mcs_acquire_c(*(global_lock), local_context)
+#define zm_abslock_release_c(global_lock, local_context)  zm_mcs_release_c(*(global_lock), local_context)
 
 #elif defined(ZMTEST_USE_TLP)
 #include <lock/zm_tlp.h>

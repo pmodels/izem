@@ -4,7 +4,14 @@
  */
 
 #include <stdlib.h>
+#include <hwloc.h>
 #include "lock/zm_mcs.h"
+
+struct zm_mcs {
+    zm_atomic_ptr_t lock;
+    struct zm_mcs_qnode *local_nodes;
+    hwloc_topology_t topo;
+};
 
 static zm_thread_local int tid = -1;
 
@@ -31,10 +38,12 @@ static inline int get_hwthread_id(hwloc_topology_t topo){
     return obj->logical_index;
 }
 
-int zm_mcs_init(zm_mcs_t *L)
-{
+static void* new_lock() {
     int max_threads;
     struct zm_mcs_qnode *qnodes;
+
+
+    struct zm_mcs *L = (struct zm_mcs*)memalign(ZM_CACHELINE_SIZE, sizeof(struct zm_mcs));
 
     hwloc_topology_init(&L->topo);
     hwloc_topology_load(L->topo);
@@ -46,11 +55,11 @@ int zm_mcs_init(zm_mcs_t *L)
     zm_atomic_store(&L->lock, (zm_ptr_t)ZM_NULL, zm_memord_release);
     L->local_nodes = qnodes;
 
-    return 0;
+    return L;
 }
 
 /* Main routines */
-static inline int acquire_c(zm_mcs_t *L, zm_mcs_qnode_t* I) {
+static inline int acquire_c(struct zm_mcs *L, zm_mcs_qnode_t* I) {
     zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
     zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
     if((zm_ptr_t)pred != ZM_NULL) {
@@ -63,7 +72,7 @@ static inline int acquire_c(zm_mcs_t *L, zm_mcs_qnode_t* I) {
 }
 
 /* Release the lock */
-static inline int release_c(zm_mcs_t *L, zm_mcs_qnode_t *I) {
+static inline int release_c(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     if (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL) {
         zm_mcs_qnode_t *tmp = I;
         if(zm_atomic_compare_exchange_strong(&L->lock,
@@ -79,12 +88,12 @@ static inline int release_c(zm_mcs_t *L, zm_mcs_qnode_t *I) {
     return 0;
 }
 
-static inline int nowaiters_c(zm_mcs_t *L, zm_mcs_qnode_t *I) {
+static inline int nowaiters_c(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
 }
 
 /* Context-less API */
-int zm_mcs_acquire(zm_mcs_t *L) {
+static inline int mcs_acquire(struct zm_mcs *L) {
     if (zm_unlikely(tid == -1)) {
         check_affinity(L->topo);
         tid = get_hwthread_id(L->topo);
@@ -92,32 +101,70 @@ int zm_mcs_acquire(zm_mcs_t *L) {
     acquire_c(L, &L->local_nodes[tid]);
 }
 
-int zm_mcs_release(zm_mcs_t *L) {
+static inline int mcs_release(struct zm_mcs *L) {
     assert(tid >= 0);
     return release_c(L, &L->local_nodes[tid]);
 }
 
-int zm_mcs_nowaiters(zm_mcs_t *L) {
+static inline int mcs_nowaiters(struct zm_mcs *L) {
     assert(tid >= 0);
     return nowaiters_c(L, &L->local_nodes[tid]);
 }
 
 /* Context-full API */
-int zm_mcs_acquire_c(zm_mcs_t *L, zm_mcs_qnode_t* I) {
+static inline int mcs_acquire_c(struct zm_mcs *L, zm_mcs_qnode_t* I) {
     return acquire_c(L, I);
 }
 
-int zm_mcs_release_c(zm_mcs_t *L, zm_mcs_qnode_t *I) {
+static inline int mcs_release_c(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     return release_c(L, I);
 }
 
-int zm_mcs_nowaiters_c(zm_mcs_t *L, zm_mcs_qnode_t *I) {
+static inline int mcs_nowaiters_c(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     return nowaiters_c(L, I);
 }
 
-int zm_mcs_destroy(zm_mcs_t *L)
+static inline int free_lock(struct zm_mcs *L)
 {
     free(L->local_nodes);
     hwloc_topology_destroy(L->topo);
     return 0;
+}
+
+
+int zm_mcs_init(zm_mcs_t *handle) {
+    *handle  = (zm_mcs_t) new_lock();
+    return 0;
+}
+
+int zm_mcs_destroy(zm_mcs_t *L) {
+    free_lock((struct zm_mcs*)(*L));
+    return 0;
+}
+
+
+/* Context-less API */
+int zm_mcs_acquire(zm_mcs_t L) {
+    return mcs_acquire((struct zm_mcs*)L) ;
+}
+
+int zm_mcs_release(zm_mcs_t L) {
+    return mcs_release((struct zm_mcs*)L) ;
+}
+
+int zm_mcs_nowaiters(zm_mcs_t L) {
+    return mcs_nowaiters((struct zm_mcs*)L) ;
+}
+
+/* Context-full API */
+int zm_mcs_acquire_c(zm_mcs_t L, zm_mcs_qnode_t* I) {
+    return mcs_acquire_c((struct zm_mcs*)L, I) ;
+}
+
+int zm_mcs_release_c(zm_mcs_t L, zm_mcs_qnode_t *I) {
+    return mcs_release_c((struct zm_mcs*)L, I) ;
+}
+
+int zm_mcs_nowaiters_c(zm_mcs_t L, zm_mcs_qnode_t *I) {
+    return mcs_nowaiters_c((struct zm_mcs*)L, I) ;
 }
