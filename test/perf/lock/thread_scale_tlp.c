@@ -28,21 +28,20 @@ static void test_thruput()
     {
         int tid = omp_get_thread_num();
         int iter;
-        zm_abslock_localctx_t ctxt;
         start_times[tid] = omp_get_wtime();
         for(iter=0; iter<TEST_NITER; iter++){
             int err;
             if(tid % 2 == 0)
-                zm_abslock_acquire(&lock, &ctxt);
+                zm_abslock_acquire(&lock);
             else
-                zm_abslock_acquire_low(&lock, &ctxt);
+                zm_abslock_acquire_l(&lock);
 
             /* Computation */
 
             for(int i = 0; i < 10; i++)
                  cache_lines[indices[i]] += cache_lines[indices[9-i]];
 
-            zm_abslock_release(&lock, &ctxt);
+            zm_abslock_release(&lock);
         }
         stop_times[tid] = omp_get_wtime();
     } /* End of omp parallel*/

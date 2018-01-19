@@ -61,14 +61,13 @@ static void test_thruput()
 
             int tid = omp_get_thread_num();
 
-            zm_abslock_localctx_t ctxt;
             /* Warmup */
             for(int iter=0; iter < WARMUP_ITER; iter++) {
-                zm_abslock_acquire(&lock, &ctxt);
+                zm_abslock_acquire(&lock);
                 /* Computation */
                 for(int i = 0; i < ARRAY_LEN; i++)
                      cache_lines[indices[i]] += cache_lines[indices[ARRAY_LEN-1-i]];
-                zm_abslock_release(&lock, &ctxt);
+                zm_abslock_release(&lock);
             }
             #pragma omp barrier
             #pragma omp single
@@ -77,11 +76,11 @@ static void test_thruput()
             }
             #pragma omp for schedule(static)
             for(int iter = 0; iter < TEST_NITER; iter++) {
-                zm_abslock_acquire(&lock, &ctxt);
+                zm_abslock_acquire(&lock);
                 /* Computation */
                 for(int i = 0; i < ARRAY_LEN; i++)
                      cache_lines[indices[i]] += cache_lines[indices[ARRAY_LEN-1-i]];
-                zm_abslock_release(&lock, &ctxt);
+                zm_abslock_release(&lock);
             }
         }
         stop_time = omp_get_wtime();
