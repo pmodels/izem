@@ -50,7 +50,7 @@ static void* new_lock() {
 
     max_threads = hwloc_get_nbobjs_by_type(L->topo, HWLOC_OBJ_PU);
 
-    qnodes = (struct zm_mcs_qnode*) memalign(ZM_CACHELINE_SIZE, sizeof(struct zm_mcs_qnode*) * max_threads);
+    qnodes = (struct zm_mcs_qnode*) memalign(ZM_CACHELINE_SIZE, sizeof(struct zm_mcs_qnode) * max_threads);
 
     zm_atomic_store(&L->lock, (zm_ptr_t)ZM_NULL, zm_memord_release);
     L->local_nodes = qnodes;
