@@ -100,6 +100,7 @@ static inline int mcs_acquire(struct zm_mcs *L) {
         tid = get_hwthread_id(L->topo);
     }
     acquire_c(L, &L->local_nodes[tid]);
+    return 0;
 }
 
 static inline int mcs_release(struct zm_mcs *L) {
