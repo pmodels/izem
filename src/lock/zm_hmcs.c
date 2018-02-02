@@ -262,7 +262,7 @@ static void* new_leaf(struct hnode *h, int depth) {
     leaf->took_fast_path = FALSE;
     struct hnode *tmp, *root_node;
     for(tmp = leaf->cur_node; tmp->parent != NULL; tmp = tmp->parent);
-        root_node = tmp;
+    root_node = tmp;
     leaf->root_node = root_node;
     return leaf;
 }
