@@ -110,9 +110,11 @@ static inline void reuse_qnode(zm_mcs_qnode_t *I){
 }
 
 static void* new_hnode() {
-    void *storage = memalign(ZM_CACHELINE_SIZE, sizeof(struct hnode));
-    if (storage == NULL) {
-        printf("Memalign failed in HMCS : new_hnode \n");
+    int err;
+    void *storage;
+    err = posix_memalign(&storage, ZM_CACHELINE_SIZE, sizeof(struct hnode));
+    if (err != 0) {
+        printf("posix_memalign failed in HMCS : new_hnode \n");
         exit(EXIT_FAILURE);
     }
     return storage;
@@ -248,9 +250,11 @@ static inline int nowaiters_helper(int level, struct hnode * L, zm_mcs_qnode_t *
 }
 
 static void* new_leaf(struct hnode *h, int depth) {
-    struct leaf *leaf = (struct leaf *)memalign(ZM_CACHELINE_SIZE, sizeof(struct leaf));
-    if (leaf == NULL) {
-        printf("Memalign failed in HMCS : new_leaf \n");
+    int err;
+    struct leaf *leaf;
+    err = posix_memalign((void **) &leaf, ZM_CACHELINE_SIZE, sizeof(struct leaf));
+    if (err != 0) {
+        printf("posix_memalign failed in HMCS : new_leaf \n");
         exit(EXIT_FAILURE);
     }
     leaf->cur_node = h;
@@ -341,7 +345,8 @@ static void free_hierarchy(int* particip_per_level){
 
 static void* new_lock(){
 
-    struct lock *L = (struct lock*)memalign(ZM_CACHELINE_SIZE, sizeof(struct lock));
+    struct lock *L;
+    posix_memalign((void **) &L, ZM_CACHELINE_SIZE, sizeof(struct lock));
 
     int max_threads;
     int *participants_at_level;
@@ -358,8 +363,10 @@ static void* new_lock(){
     for (int i=0; i < levels; i++) {
         total_locks_needed += max_threads / participants_at_level[i] ;
     }
-    struct hnode ** lock_locations = (struct hnode**)memalign(ZM_CACHELINE_SIZE, sizeof(struct hnode*) * total_locks_needed);
-    struct leaf ** leaf_nodes = (struct leaf**)memalign(ZM_CACHELINE_SIZE, sizeof(struct leaf*) * max_threads);
+    struct hnode ** lock_locations;
+    posix_memalign((void **) &lock_locations, ZM_CACHELINE_SIZE, sizeof(struct hnode*) * total_locks_needed);
+    struct leaf ** leaf_nodes;
+    posix_memalign((void **) &leaf_nodes, ZM_CACHELINE_SIZE, sizeof(struct leaf*) * max_threads);
 
     int threshold = DEFAULT_THRESHOLD;
     char *s = getenv("ZM_HMCS_THRESHOLD");
