@@ -135,7 +135,8 @@ static inline int free_lock(struct zm_mcs *L)
 
 
 int zm_mcs_init(zm_mcs_t *handle) {
-    *handle  = (zm_mcs_t) new_lock();
+    void *p = new_lock();
+    *handle  = (zm_mcs_t) p;
     return 0;
 }
 
@@ -147,26 +148,31 @@ int zm_mcs_destroy(zm_mcs_t *L) {
 
 /* Context-less API */
 int zm_mcs_acquire(zm_mcs_t L) {
-    return mcs_acquire((struct zm_mcs*)L) ;
+    /*
+      It is prohibited to convert intptr_t (=zm_mcs_t) to a non-void pointer.
+      Converting intptr_t to void*, then void* to any pointer type is permitted.
+      cf. https://stackoverflow.com/questions/34291377/converting-a-non-void-pointer-to-uintptr-t-and-vice-versa
+    */
+    return mcs_acquire((struct zm_mcs*)(void *)L) ;
 }
 
 int zm_mcs_release(zm_mcs_t L) {
-    return mcs_release((struct zm_mcs*)L) ;
+    return mcs_release((struct zm_mcs*)(void *)L) ;
 }
 
 int zm_mcs_nowaiters(zm_mcs_t L) {
-    return mcs_nowaiters((struct zm_mcs*)L) ;
+    return mcs_nowaiters((struct zm_mcs*)(void *)L) ;
 }
 
 /* Context-full API */
 int zm_mcs_acquire_c(zm_mcs_t L, zm_mcs_qnode_t* I) {
-    return mcs_acquire_c((struct zm_mcs*)L, I) ;
+    return mcs_acquire_c((struct zm_mcs*)(void *)L, I) ;
 }
 
 int zm_mcs_release_c(zm_mcs_t L, zm_mcs_qnode_t *I) {
-    return mcs_release_c((struct zm_mcs*)L, I) ;
+    return mcs_release_c((struct zm_mcs*)(void *)L, I) ;
 }
 
 int zm_mcs_nowaiters_c(zm_mcs_t L, zm_mcs_qnode_t *I) {
-    return mcs_nowaiters_c((struct zm_mcs*)L, I) ;
+    return mcs_nowaiters_c((struct zm_mcs*)(void *)L, I) ;
 }

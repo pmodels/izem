@@ -57,7 +57,7 @@ static inline zm_facell_t *zm_facell_find(zm_faseg_t **seg, zm_ulong_t cell_id) 
 int zm_faqueue_init(zm_faqueue_t *q) {
     q->head = 0;
     zm_atomic_store(&q->tail, 0, zm_memord_release);
-    q->seg_head = (zm_ptr_t)zm_faseg_alloc(0);
+    q->seg_head = (zm_ptr_t)(void *)zm_faseg_alloc(0);
     zm_atomic_store(&q->seg_tail, q->seg_head, zm_memord_release);
     return 0;
 }
@@ -78,7 +78,7 @@ int zm_faqueue_dequeue(zm_faqueue_t* q, void **data) {
         *data = seg_head->cells[q->head].data;
         q->head++;
         if (q->head % ZM_MAX_FASEG_SIZE == 0) { /* processed all seg_head */
-            q->seg_head = (zm_ptr_t)zm_faseg_advance(seg_head, q->head);
+            q->seg_head = (zm_ptr_t)(void*)zm_faseg_advance(seg_head, q->head);
             free(seg_head);
         }
     }
