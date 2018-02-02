@@ -468,7 +468,8 @@ static inline int hmcs_nowaiters(struct lock *L){
 }
 
 int zm_hmcs_init(zm_hmcs_t * handle) {
-    *handle  = (zm_hmcs_t) new_lock();
+    void *p = new_lock();
+    *handle  = (zm_hmcs_t) p;
     return 0;
 }
 
