@@ -20,10 +20,14 @@ int zm_tlp_destroy(zm_tlp_t *);
 
 int zm_tlp_acquire(zm_tlp_t* lock);
 int zm_tlp_acquire_low(zm_tlp_t* lock);
+int zm_tlp_tryacq(zm_tlp_t* lock, int*);
+int zm_tlp_tryacq_low(zm_tlp_t* lock, int*);
 int zm_tlp_release(zm_tlp_t* lock);
 
 int zm_tlp_acquire_c(zm_tlp_t* lock, zm_mcs_qnode_t*);
 int zm_tlp_acquire_low_c(zm_tlp_t* lock, zm_mcs_qnode_t*);
+int zm_tlp_tryacq_c(zm_tlp_t* lock, zm_mcs_qnode_t*, int*);
+int zm_tlp_tryacq_low_c(zm_tlp_t* lock, zm_mcs_qnode_t*, int*);
 int zm_tlp_release_c(zm_tlp_t* lock, zm_mcs_qnode_t*);
 
 #endif /* _ZM_TLP_H */

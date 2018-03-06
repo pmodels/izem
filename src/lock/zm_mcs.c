@@ -72,6 +72,20 @@ static inline int acquire_c(struct zm_mcs *L, zm_mcs_qnode_t* I) {
     return 0;
 }
 
+static inline int tryacq_c(struct zm_mcs *L, zm_mcs_qnode_t* I, int *success) {
+    int acquired  = 0;
+    zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
+    zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
+    if(zm_atomic_compare_exchange_strong(&L->lock,
+                                         (zm_ptr_t*)&I,
+                                         ZM_NULL,
+                                         zm_memord_acq_rel,
+                                         zm_memord_acquire))
+        acquired = 1;
+    *success = acquired;
+    return 0;
+}
+
 /* Release the lock */
 static inline int release_c(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     if (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL) {
@@ -103,6 +117,14 @@ static inline int mcs_acquire(struct zm_mcs *L) {
     return 0;
 }
 
+int mcs_tryacq(struct zm_mcs *L, int *success) {
+    if (zm_unlikely(tid == -1)) {
+        check_affinity(L->topo);
+        tid = get_hwthread_id(L->topo);
+    }
+    tryacq_c(L, &L->local_nodes[tid], success);
+}
+
 static inline int mcs_release(struct zm_mcs *L) {
     assert(tid >= 0);
     return release_c(L, &L->local_nodes[tid]);
@@ -117,6 +139,11 @@ static inline int mcs_nowaiters(struct zm_mcs *L) {
 static inline int mcs_acquire_c(struct zm_mcs *L, zm_mcs_qnode_t* I) {
     return acquire_c(L, I);
 }
+
+int mcs_tryacq_c(struct zm_mcs *L, zm_mcs_qnode_t* I, int *success) {
+    return tryacq_c(L, I, success);
+}
+
 
 static inline int mcs_release_c(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     return release_c(L, I);
@@ -156,6 +183,10 @@ int zm_mcs_acquire(zm_mcs_t L) {
     return mcs_acquire((struct zm_mcs*)(void *)L) ;
 }
 
+int zm_mcs_tryacq(zm_mcs_t L, int *success) {
+    return mcs_tryacq((struct zm_mcs*)(void *)L, success) ;
+}
+
 int zm_mcs_release(zm_mcs_t L) {
     return mcs_release((struct zm_mcs*)(void *)L) ;
 }
@@ -167,6 +198,10 @@ int zm_mcs_nowaiters(zm_mcs_t L) {
 /* Context-full API */
 int zm_mcs_acquire_c(zm_mcs_t L, zm_mcs_qnode_t* I) {
     return mcs_acquire_c((struct zm_mcs*)(void *)L, I) ;
+}
+
+int zm_mcs_tryacq_c(zm_mcs_t L, zm_mcs_qnode_t* I, int *success) {
+    return mcs_tryacq_c((struct zm_mcs*)(void *)L, I, success) ;
 }
 
 int zm_mcs_release_c(zm_mcs_t L, zm_mcs_qnode_t *I) {

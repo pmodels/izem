@@ -459,6 +459,14 @@ static inline void hmcs_acquire(struct lock *L){
     acquire_from_leaf(L->levels, L->leaf_nodes[tid]);
 }
 
+static inline void hmcs_tryacq(struct lock *L){
+    if (zm_unlikely(tid == -1)) {
+        check_affinity(L->topo);
+        tid = get_hwthread_id(L->topo);
+    }
+    acquire_from_leaf(L->levels, L->leaf_nodes[tid]);
+}
+
 static inline void hmcs_release(struct lock *L){
     release_from_leaf(L->levels, L->leaf_nodes[tid]);
 }
@@ -480,6 +488,11 @@ int zm_hmcs_destroy(zm_hmcs_t *L) {
 
 int zm_hmcs_acquire(zm_hmcs_t L){
     hmcs_acquire((struct lock*)L);
+    return 0;
+}
+
+int zm_hmcs_tryacq(zm_hmcs_t L){
+    hmcs_tryacq((struct lock*)L);
     return 0;
 }
 int zm_hmcs_release(zm_hmcs_t L){

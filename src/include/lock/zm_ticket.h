@@ -10,6 +10,7 @@
 int zm_ticket_init(zm_ticket_t *);
 int zm_ticket_destroy(zm_ticket_t *);
 int zm_ticket_acquire(zm_ticket_t*);
+int zm_ticket_tryacq(zm_ticket_t*, int*);
 int zm_ticket_release(zm_ticket_t*);
 int zm_ticket_nowaiters(zm_ticket_t*);
 

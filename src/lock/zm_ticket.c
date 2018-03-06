@@ -21,6 +21,21 @@ int zm_ticket_acquire(zm_ticket_t* lock) {
     return 0;
 }
 
+int zm_ticket_tryacq(zm_ticket_t* lock, int *success) {
+    int acquired  = 0;
+    unsigned my_ticket = zm_atomic_load(&lock->next_ticket, zm_memord_acquire);
+    unsigned serving = zm_atomic_load(&lock->now_serving, zm_memord_acquire);
+    if (my_ticket == serving) {
+        if(zm_atomic_compare_exchange_strong(&lock->next_ticket,
+                                            &my_ticket,
+                                            my_ticket + 1,
+                                            zm_memord_acq_rel,
+                                            zm_memord_acquire))
+        acquired  = 1;
+    }
+    return 0;
+}
+
 /* Release the lock */
 int zm_ticket_release(zm_ticket_t* lock) {
     zm_atomic_fetch_add(&lock->now_serving, 1, zm_memord_release);

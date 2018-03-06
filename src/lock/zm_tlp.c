@@ -72,6 +72,17 @@ unlock(low_p)
 #endif
 
 #if (ZM_TLP_HIGH_P == ZM_TICKET)
+#define zm_tlp_tryacq_high_p(L, s)               zm_ticket_tryacq(&L->high_p, s)
+#define zm_tlp_tryacq_high_pc(L, local_ctxt, s)  zm_ticket_tryacq(&L->high_p, s)
+#elif (ZM_TLP_HIGH_P == ZM_MCS)
+#define zm_tlp_tryacq_high_p(L, s)               zm_mcs_tryacq(&L->high_p, local_ctxt, s)
+#define zm_tlp_tryacq_high_pc(L, local_ctxt, s)  zm_mcs_tryacq(&L->high_p, local_ctxt, s)
+#elif (ZM_TLP_HIGH_P == ZM_HMCS)
+#define zm_tlp_tryacq_high_p(L, s)               zm_hmcs_tryacq(L->high_p, s)
+#define zm_tlp_tryacq_high_pc(L, local_ctxt, s)  zm_hmcs_tryacq(L->high_p, s)
+#endif
+
+#if (ZM_TLP_HIGH_P == ZM_TICKET)
 #define zm_tlp_release_high_p(L)         zm_ticket_release(&L->high_p)
 #define zm_tlp_release_high_pc(L, ctxt)  zm_ticket_release(&L->high_p)
 #elif (ZM_TLP_HIGH_P == ZM_MCS)
@@ -107,6 +118,17 @@ unlock(low_p)
 #elif (ZM_TLP_LOW_P == ZM_HMCS)
 #define zm_tlp_acquire_low_p(L)              zm_hmcs_acquire(L->low_p)
 #define zm_tlp_acquire_low_pc(L, local_ctxt) zm_hmcs_acquire(L->low_p)
+#endif
+
+#if (ZM_TLP_LOW_P == ZM_TICKET)
+#define zm_tlp_tryacq_low_p(L, s)               zm_ticket_tryacq(L->low_p, s)
+#define zm_tlp_tryacq_low_pc(L, local_ctxt, s)  zm_ticket_tryacq(L->low_p, s)
+#elif (ZM_TLP_LOW_P == ZM_MCS)
+#define zm_tlp_tryacq_low_p(L, s)               zm_mcs_tryacq(L->low_p, s)
+#define zm_tlp_tryacq_low_pc(L, local_ctxt, s)  zm_mcs_tryacq(L->low_p, s)
+#elif (ZM_TLP_LOW_P == ZM_HMCS)
+#define zm_tlp_tryacq_low_p(L, s)               zm_hmcs_tryacq(L->low_p, s)
+#define zm_tlp_tryacq_low_pc(L, local_ctxt, s)  zm_hmcs_tryacq(L->low_p, s)
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
@@ -159,11 +181,37 @@ int zm_tlp_acquire(zm_tlp_t *L) {
     return 0;
 }
 
+int zm_tlp_tryacq(zm_tlp_t *L, int *success) {
+    int acquired = 0;
+    zm_tlp_tryacq_high_p(L, &acquired);
+    if(acquired) {
+        if (!L->go_straight) {
+            zm_ticket_tryacq(&L->filter, &acquired);
+            if (acquired)
+                L->go_straight = 1;
+        }
+    }
+    return 0;
+}
+
 int zm_tlp_acquire_low(zm_tlp_t *L) {
     /* Acquire the low priority lock */
    zm_tlp_acquire_low_p(L);
    zm_ticket_acquire(&L->filter);
    L->low_p_acq = 1;
+    return 0;
+}
+
+int zm_tlp_tryacq_low(zm_tlp_t *L, int *success) {
+    int acquired = 0;
+    zm_tlp_tryacq_low_p(L, &acquired);
+    if(acquired) {
+        if (!L->go_straight) {
+            zm_ticket_tryacq(&L->filter, &acquired);
+            if (acquired)
+                L->go_straight = 1;
+        }
+    }
     return 0;
 }
 

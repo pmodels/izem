@@ -24,10 +24,36 @@ int zm_mcsp_acquire(zm_mcsp_t *L) {
     return 0;
 }
 
+int zm_mcsp_tryacq(zm_mcsp_t *L, int *success) {
+    zm_mcs_tryacq(L->high_p, success);
+    if (success) {
+        if (!L->go_straight) {
+            zm_ticket_tryacq(&L->filter, success);
+            if (success)
+                L->go_straight = 1;
+            else
+                zm_mcs_release(L->high_p);
+        }
+    }
+    return 0;
+}
+
 int zm_mcsp_acquire_low(zm_mcsp_t *L) {
     zm_mcs_acquire(L->low_p);
     zm_ticket_acquire(&L->filter);
     L->low_p_acq = 1;
+    return 0;
+}
+
+int zm_mcsp_tryacq_low(zm_mcsp_t *L, int *success) {
+    zm_mcs_tryacq(L->low_p, success);
+    if (success) {
+        zm_ticket_tryacq(&L->filter, success);
+        if (success)
+                L->low_p_acq = 1;
+        else
+                zm_mcs_release(L->low_p);
+    }
     return 0;
 }
 
