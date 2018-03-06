@@ -12,11 +12,15 @@
 #define zm_abslock_destroy(global_lock)          zm_ticket_destroy(global_lock)
 /* Context-less routines */
 #define zm_abslock_acquire(global_lock)          zm_ticket_acquire(global_lock)
+#define zm_abslock_tryacq(global_lock, suc)      zm_ticket_tryacq(global_lock, suc)
 #define zm_abslock_acquire_l(global_lock)        zm_ticket_acquire(global_lock)
+#define zm_abslock_tryacq_l(global_lock, suc)    zm_ticket_tryacq(global_lock, suc)
 #define zm_abslock_release(global_lock)          zm_ticket_release(global_lock)
 /* Context-full routines */
 #define zm_abslock_acquire_c(global_lock, local_context)  zm_ticket_acquire(global_lock)
+#define zm_abslock_tryacq_c(global_lock, local_ctx, suc)  zm_ticket_tryacq(global_lock, suc)
 #define zm_abslock_acquire_lc(global_lock, local_context) zm_ticket_acquire(global_lock)
+#define zm_abslock_tryacq_lc(global_lock, local_ctx, suc) zm_ticket_tryacq_lc(global_lock, suc)
 #define zm_abslock_release_c(global_lock, local_context)  zm_ticket_release(global_lock)
 
 #elif defined(ZMTEST_USE_MCS)
@@ -28,11 +32,15 @@
 #define zm_abslock_destroy             zm_mcs_destroy
 /* Context-less routines */
 #define zm_abslock_acquire(global_lock)          zm_mcs_acquire(*(global_lock))
+#define zm_abslock_tryacq(global_lock, suc)      zm_mcs_tryacq(*(global_lock), suc)
 #define zm_abslock_acquire_l(global_lock)        zm_mcs_acquire(*(global_lock))
+#define zm_abslock_tryacq_l(global_lock, suc)    zm_mcs_tryacq_l(*(global_lock), suc)
 #define zm_abslock_release(global_lock)          zm_mcs_release(*(global_lock))
 /* Context-full routines */
 #define zm_abslock_acquire_c(global_lock, local_context)  zm_mcs_acquire_c(*(global_lock), local_context)
+#define zm_abslock_tryacq_c(global_lock, local_ctx, suc)  zm_mcs_tryacq_c(*(global_lock), local_ctx, suc)
 #define zm_abslock_acquire_lc(global_lock, local_context) zm_mcs_acquire_c(*(global_lock), local_context)
+#define zm_abslock_tryacq_lc(global_lock, local_ctx, suc) zm_mcs_tryacq_c(*(global_lock), local_ctx, suc)
 #define zm_abslock_release_c(global_lock, local_context)  zm_mcs_release_c(*(global_lock), local_context)
 
 #elif defined(ZMTEST_USE_TLP)
@@ -43,12 +51,16 @@
 #define zm_abslock_init                zm_tlp_init
 #define zm_abslock_destroy             zm_tlp_destroy
 /* Context-less routines */
-#define zm_abslock_acquire(global_lock)    zm_tlp_acquire(global_lock)
-#define zm_abslock_acquire_l(global_lock)  zm_tlp_acquire_low(global_lock)
-#define zm_abslock_release(global_lock)    zm_tlp_release(global_lock)
+#define zm_abslock_acquire(global_lock)         zm_tlp_acquire(global_lock)
+#define zm_abslock_tryacq(global_lock, suc)     zm_tlp_tryacq(global_lock, suc)
+#define zm_abslock_acquire_l(global_lock)       zm_tlp_acquire_low(global_lock)
+#define zm_abslock_tryacq_l(global_lock, suc)   zm_tlp_acquire_low(global_lock, suc)
+#define zm_abslock_release(global_lock)         zm_tlp_release(global_lock)
 /* Context-full routines */
 #define zm_abslock_acquire_c(global_lock, local_context)  zm_tlp_acquire_c(global_lock, local_context)
+#define zm_abslock_tryacq_c(global_lock, local_ctx, suc)  zm_tlp_tryacq_c(global_lock, local_ctx, suc)
 #define zm_abslock_acquire_lc(global_lock, local_context) zm_tlp_acquire_low_c(global_lock, local_context)
+#define zm_abslock_tryacq_lc(global_lock, local_ctx, suc) zm_tlp_tryacq_low_c(global_lock, local_ctx, suc)
 #define zm_abslock_release_c(global_lock, local_context)  zm_tlp_release_c(global_lock, local_context)
 
 #elif defined(ZMTEST_USE_HMCS)
@@ -60,11 +72,15 @@
 #define zm_abslock_destroy                       zm_hmcs_destroy
 /* Context-less routines */
 #define zm_abslock_acquire(global_lock)          zm_hmcs_acquire(*(global_lock))
+#define zm_abslock_tryacq(global_lock, suc)      zm_hmcs_acquire(*(global_lock), suc)
 #define zm_abslock_acquire_l(global_lock)        zm_hmcs_acquire(*(global_lock))
+#define zm_abslock_tryacq_l(global_lock, suc)    zm_hmcs_acquire(*(global_lock), suc)
 #define zm_abslock_release(global_lock)          zm_hmcs_release(*(global_lock))
 /* Context-full routines */
 #define zm_abslock_acquire_c(global_lock, local_context)  zm_hmcs_acquire(*(global_lock))
+#define zm_abslock_tryacq_c(global_lock, local_ctx, suc)  zm_hmcs_tryacq(*(global_lock), suc)
 #define zm_abslock_acquire_lc(global_lock, local_context) zm_hmcs_acquire(*(global_lock))
+#define zm_abslock_tryacq_lc(global_lock, local_ctx, suc) zm_hmcs_tryacq(*(global_lock), suc)
 #define zm_abslock_release_c(global_lock, local_context)  zm_hmcs_release(*(global_lock))
 
 #else
