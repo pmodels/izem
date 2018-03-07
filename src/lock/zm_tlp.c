@@ -121,8 +121,8 @@ unlock(low_p)
 #endif
 
 #if (ZM_TLP_LOW_P == ZM_TICKET)
-#define zm_tlp_tryacq_low_p(L, s)               zm_ticket_tryacq(L->low_p, s)
-#define zm_tlp_tryacq_low_pc(L, local_ctxt, s)  zm_ticket_tryacq(L->low_p, s)
+#define zm_tlp_tryacq_low_p(L, s)               zm_ticket_tryacq(&L->low_p, s)
+#define zm_tlp_tryacq_low_pc(L, local_ctxt, s)  zm_ticket_tryacq(&L->low_p, s)
 #elif (ZM_TLP_LOW_P == ZM_MCS)
 #define zm_tlp_tryacq_low_p(L, s)               zm_mcs_tryacq(L->low_p, s)
 #define zm_tlp_tryacq_low_pc(L, local_ctxt, s)  zm_mcs_tryacq(L->low_p, s)
