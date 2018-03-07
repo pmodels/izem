@@ -75,7 +75,6 @@ static inline int acquire_c(struct zm_mcs *L, zm_mcs_qnode_t* I) {
 static inline int tryacq_c(struct zm_mcs *L, zm_mcs_qnode_t* I, int *success) {
     int acquired  = 0;
     zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
-    zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
     if(zm_atomic_compare_exchange_strong(&L->lock,
                                          (zm_ptr_t*)&I,
                                          ZM_NULL,
@@ -117,12 +116,12 @@ static inline int mcs_acquire(struct zm_mcs *L) {
     return 0;
 }
 
-int mcs_tryacq(struct zm_mcs *L, int *success) {
+static inline int mcs_tryacq(struct zm_mcs *L, int *success) {
     if (zm_unlikely(tid == -1)) {
         check_affinity(L->topo);
         tid = get_hwthread_id(L->topo);
     }
-    tryacq_c(L, &L->local_nodes[tid], success);
+    return tryacq_c(L, &L->local_nodes[tid], success);
 }
 
 static inline int mcs_release(struct zm_mcs *L) {

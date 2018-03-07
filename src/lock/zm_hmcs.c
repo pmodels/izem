@@ -395,7 +395,7 @@ static void* new_lock(){
 
     // setup parents
     for(int tid = 0 ; tid < max_threads; tid ++){
-        hwloc_get_obj_by_type (L->topo, HWLOC_OBJ_PU, tid);
+        obj = hwloc_get_obj_by_type (L->topo, HWLOC_OBJ_PU, tid);
         hwloc_set_cpubind(L->topo, obj->cpuset, HWLOC_CPUBIND_THREAD);
         int last_lock_location_end = 0;
         for(int cur_level = 0 ; cur_level < levels - 1; cur_level++){

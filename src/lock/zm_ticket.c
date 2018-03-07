@@ -33,6 +33,7 @@ int zm_ticket_tryacq(zm_ticket_t* lock, int *success) {
                                             zm_memord_acquire))
         acquired  = 1;
     }
+    *success = acquired;
     return 0;
 }
 
