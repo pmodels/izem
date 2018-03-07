@@ -72,10 +72,10 @@ int zm_faqueue_enqueue(zm_faqueue_t* q, void *data) {
 int zm_faqueue_dequeue(zm_faqueue_t* q, void **data) {
     *data = NULL;
     zm_faseg_t *seg_head = (zm_faseg_t*)q->seg_head;
-    if (seg_head->cells[q->head].data == ZM_FAQUEUE_ALPHA) /* queue empty */
+    if (seg_head->cells[q->head % ZM_MAX_FASEG_SIZE].data == ZM_FAQUEUE_ALPHA) /* queue empty */
         return 0;
     else {
-        *data = seg_head->cells[q->head].data;
+        *data = seg_head->cells[q->head % ZM_MAX_FASEG_SIZE].data;
         q->head++;
         if (q->head % ZM_MAX_FASEG_SIZE == 0) { /* processed all seg_head */
             q->seg_head = (zm_ptr_t)(void*)zm_faseg_advance(seg_head, q->head);
