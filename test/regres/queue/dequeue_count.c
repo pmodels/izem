@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "zmtest_absqueue.h"
-#define TEST_NTHREADS 36
+#define TEST_NTHREADS 3
 #define TEST_NELEMTS  1000
 
 typedef struct thread_data thread_data_t;
