@@ -40,3 +40,9 @@ int zm_swpqueue_dequeue(zm_swpqueue_t* q, void **data) {
     }
     return 1;
 }
+
+int zm_swpqueue_isempty(zm_swpqueue_t* q) {
+    zm_swpqnode_t* head;
+    head = (zm_swpqnode_t*) zm_atomic_load(&q->head, zm_memord_acquire);
+    return (head->next == ZM_NULL);
+}

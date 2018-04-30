@@ -36,14 +36,18 @@
 #define zm_atomic_uint_t  volatile unsigned int
 #define zm_atomic_ptr_t   volatile zm_ptr_t
 #define zm_atomic_ulong_t volatile unsigned long
+#define zm_atomic_llong_t volatile long long
 #define zm_atomic_flag_t  volatile unsigned int
+#define zm_atomic_char_t  volatile char
 #else
 #include <stdatomic.h>
 /* Atomic Types */
 #define zm_atomic_uint_t  atomic_uint
 #define zm_atomic_ptr_t   atomic_intptr_t
 #define zm_atomic_ulong_t atomic_ulong
+#define zm_atomic_llong_t atomic_llong
 #define zm_atomic_flag_t atomic_flag
+#define zm_atomic_char_t  atomic_char
 /* Memory ordering */
 #define zm_memord_relaxed memory_order_relaxed
 #define zm_memord_consume memory_order_consume
@@ -66,7 +70,9 @@
 #define zm_atomic_uint_t  unsigned int
 #define zm_atomic_ptr_t   intptr_t
 #define zm_atomic_ulong_t unsigned long
+#define zm_atomic_llong_t long long
 #define zm_atomic_flag_t  unsigned int
+#define zm_atomic_char_t  char
 /* Memory ordering */
 #define zm_memord_relaxed __ATOMIC_RELAXED
 #define zm_memord_consume __ATOMIC_CONSUME

@@ -12,8 +12,9 @@
 /* mpbqueue: MPB: Multiple Producer Bucket queue. Concurrent queue where both enqueue and dequeue operations
  * are protected with the same global lock (thus, the gl prefix) */
 
-int zm_mpbqueue_init(zm_mpbqueue_t *, int);
-int zm_mpbqueue_enqueue(zm_mpbqueue_t* q, void *data, int);
-int zm_mpbqueue_dequeue(zm_mpbqueue_t* q, void **data, int);
+int zm_mpbqueue_init(struct zm_mpbqueue *, int);
+int zm_mpbqueue_enqueue(struct zm_mpbqueue* q, void *data, int);
+int zm_mpbqueue_dequeue(struct zm_mpbqueue* q, void **data);
+int zm_mpbqueue_dequeue_bulk(struct zm_mpbqueue* q, void*[], int, int*);
 
 #endif /* _ZM_MPBQUEUE_H */
