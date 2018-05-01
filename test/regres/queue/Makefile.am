@@ -11,7 +11,8 @@ TESTS = \
 	dequeue_count_mpsc_ms \
 	dequeue_count_spmc_gl \
 	dequeue_count_spmc_ms \
-	dequeue_count_mpsc_fa
+	dequeue_count_mpsc_fa \
+	deq_count_mpb
 
 #XFAIL_TESTS = dequeue_count_mpsc_fa
 
@@ -28,6 +29,7 @@ dequeue_count_mpsc_fa_SOURCES = dequeue_count.c
 dequeue_count_mpsc_ms_SOURCES = dequeue_count.c
 dequeue_count_spmc_gl_SOURCES = dequeue_count.c
 dequeue_count_spmc_ms_SOURCES = dequeue_count.c
+deq_count_mpb_SOURCES        = deq_count_mpb.c
 
 dequeue_count_mpmc_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_MPMC -DZMTEST_ALLOC_QELEM
 dequeue_count_mpmc_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_MPMC -DZMTEST_ALLOC_QELEM
@@ -46,3 +48,4 @@ dequeue_count_mpsc_fa_LDFLAGS = -pthread
 dequeue_count_mpsc_ms_LDFLAGS = -pthread
 dequeue_count_spmc_gl_LDFLAGS = -pthread
 dequeue_count_spmc_ms_LDFLAGS = -pthread
+deq_count_mpb_LDFLAGS        = -pthread
