@@ -8,6 +8,7 @@
 
 #define EMPTY_BUCKET 0
 #define NONEMPTY_BUCKET 1
+#define INCONSISTENT_BUCKET 2
 
 #define LOAD(addr)                  zm_atomic_load(addr, zm_memord_acquire)
 #define STORE(addr, val)            zm_atomic_store(addr, val, zm_memord_release)
@@ -42,15 +43,23 @@ int zm_mpbqueue_init(struct zm_mpbqueue *q, int nbuckets) {
 }
 
 int zm_mpbqueue_enqueue(struct zm_mpbqueue* q, void *data, int bucket_idx) {
+ 
+//    if(zm_swpqueue_isempty(&q->buckets[bucket_idx]))
+        STORE(&q->bucket_states[bucket_idx], INCONSISTENT_BUCKET);
+
     /* Push to the queue at bucket_idx*/
     zm_swpqueue_enqueue(&q->buckets[bucket_idx], data);
-    /* set bucket state to non-empty if queue previously empty */
-    /* a store is sufficient */
+
+
     STORE(&q->bucket_states[bucket_idx], NONEMPTY_BUCKET);
+
     return 0;
 }
 
 int zm_mpbqueue_dequeue(struct zm_mpbqueue* q, void **data) {
+
+    *data = NULL;
+
     /* Check for a nonempty bucket in sets of bucket_setsz */
     int llong_width  = (int) sizeof(zm_atomic_llong_t);
     int nbucket_sets = q->nbuckets/llong_width;
@@ -58,6 +67,7 @@ int zm_mpbqueue_dequeue(struct zm_mpbqueue* q, void **data) {
 
     zm_atomic_llong_t *bucket_state_sets = (zm_atomic_llong_t *)q->bucket_states;
     int i;
+    int ndeq = 0;
     for(i = 0; i < nbucket_sets; i++) {
         int offset = (q->last_bucket_set + i) % nbucket_sets;
         if(LOAD(&bucket_state_sets[offset]) > EMPTY_BUCKET) {
@@ -65,11 +75,12 @@ int zm_mpbqueue_dequeue(struct zm_mpbqueue* q, void **data) {
             for(j = 0; j < bucket_setsz; j++) {
                 int bucket_idx = offset * bucket_setsz + j;
                 if (LOAD(&q->bucket_states[bucket_idx]) == NONEMPTY_BUCKET) {
+                    assert(!zm_swpqueue_isempty(&q->buckets[bucket_idx]));
                     zm_swpqueue_dequeue(&q->buckets[bucket_idx], data);
-                    if(zm_swpqueue_isempty(&q->buckets[bucket_idx])) {
-                        char tmp = EMPTY_BUCKET;
-                        CAS(&q->bucket_states[bucket_idx], &tmp, NONEMPTY_BUCKET);
-                    }
+                    assert(*data != NULL);
+                    ndeq++;
+                    if(zm_swpqueue_isempty(&q->buckets[bucket_idx]))
+                        STORE(&q->bucket_states[bucket_idx], EMPTY_BUCKET);
                     break;
                 }
             }
@@ -78,6 +89,7 @@ int zm_mpbqueue_dequeue(struct zm_mpbqueue* q, void **data) {
         }
     }
     q->last_bucket_set = (q->last_bucket_set + i) % nbucket_sets;
+    assert(ndeq <= 1);
     return 1;
 }
 
@@ -99,8 +111,8 @@ int zm_mpbqueue_dequeue_bulk(struct zm_mpbqueue* q, void **data, int in_count, i
                     zm_swpqueue_dequeue(&q->buckets[bucket_idx], &data[out_idx]);
                     out_idx++;
                     if(zm_swpqueue_isempty(&q->buckets[bucket_idx])) {
-                        char tmp = EMPTY_BUCKET;
-                        CAS(&q->bucket_states[bucket_idx], &tmp, NONEMPTY_BUCKET);
+                        char tmp = NONEMPTY_BUCKET;
+                        CAS(&q->bucket_states[bucket_idx], &tmp, EMPTY_BUCKET);
                     }
                     if(out_idx >= in_count)
                         break;
