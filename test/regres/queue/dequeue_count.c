@@ -19,9 +19,9 @@ zm_atomic_uint_t test_counter = 0;
 
 static void* func(void *arg) {
 #if defined(ZMTEST_ALLOC_QELEM)
-    int *input;
+    size_t *input;
 #else
-    int input = 1;
+    size_t input = 1;
 #endif
     int tid, nelem_enq, nelem_deq, producer_b;
     zm_absqueue_t* queue;
@@ -43,22 +43,22 @@ static void* func(void *arg) {
     producer_b = (tid == 0);
 #endif
 
-    int elem;
     if(producer_b) { /* producer */
+        size_t elem;
         for(elem=0; elem < nelem_enq; elem++) {
 #if defined(ZMTEST_ALLOC_QELEM)
             input = malloc(sizeof *input);
             *input = 1;
             zm_absqueue_enqueue(queue, (void*) input);
 #else
-            zm_absqueue_enqueue(queue, (void*) &input);
+            zm_absqueue_enqueue(queue, (void*) input);
 #endif
         }
     } else {           /* consumer */
         while(zm_atomic_load(&test_counter, zm_memord_acquire) < nelem_deq) {
-            int* elem = NULL;
+            void* elem;
             zm_absqueue_dequeue(queue, (void**)&elem);
-            if ((elem != NULL) && (*elem == 1)) {
+            if ((elem != NULL) && ((size_t)elem == 1)) {
                     zm_atomic_fetch_add(&test_counter, 1, zm_memord_acq_rel);
 #if defined(ZMTEST_ALLOC_QELEM)
             free(elem);
