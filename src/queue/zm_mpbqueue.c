@@ -121,11 +121,11 @@ int zm_mpbqueue_dequeue_bulk(struct zm_mpbqueue* q, void **data, int in_count, i
                 if (LOAD(&q->bucket_states[bucket_idx]) == NONEMPTY_BUCKET) {
                     zm_swpqueue_dequeue(&q->buckets[bucket_idx], &data[out_idx]);
                     out_idx++;
-                    if(zm_swpqueue_isempty_strong(&q->buckets[bucket_idx])) {
-                        char tmp = NONEMPTY_BUCKET;
-                        CAS(&q->bucket_states[bucket_idx], &tmp, EMPTY_BUCKET);
+                    if(zm_swpqueue_isempty_weak(&q->buckets[bucket_idx])) {
+                        if(zm_swpqueue_isempty_strong(&q->buckets[bucket_idx]))
+                            STORE(&q->bucket_states[bucket_idx], EMPTY_BUCKET);
                     }
-                    if(out_idx >= in_count)
+                    if(out_idx >= (in_count -1))
                         break;
                 }
             }
