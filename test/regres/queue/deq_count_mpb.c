@@ -10,6 +10,7 @@
 #define TEST_NTHREADS 64
 #define TEST_NBUCKETS 16
 #define TEST_NELEMTS  1000
+#define TEST_BATCHSZ  10
 
 typedef struct thread_data thread_data_t;
 struct thread_data {
@@ -39,11 +40,22 @@ static void* func(void *arg) {
         }
     } else {           /* consumer */
         while(zm_atomic_load(&test_counter, zm_memord_acquire) < nelem_deq) {
+#if !defined(ZMTEST_BULK)
             void* elem;
             zm_mpbqueue_dequeue(queue, (void**)&elem);
             if ((elem != NULL) && ((size_t)elem == 1)) {
                     zm_atomic_fetch_add(&test_counter, 1, zm_memord_acq_rel);
             }
+#else
+            void* elems[TEST_BATCHSZ];
+            int out_count = 0;
+            zm_mpbqueue_dequeue_bulk(queue, elems, TEST_BATCHSZ, &out_count);
+            if(out_count > 0)
+                for(int i = 0; i < out_count; i++)
+                    if ((size_t)elems[i] == 1)
+                        zm_atomic_fetch_add(&test_counter, 1, zm_memord_acq_rel);
+
+#endif
         }
 
     }
