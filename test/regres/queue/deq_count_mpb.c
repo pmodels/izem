@@ -7,8 +7,8 @@
 #include <pthread.h>
 #include "queue/zm_mpbqueue.h"
 #include "queue/zm_swpqueue.h"
-#define TEST_NTHREADS 3
-#define TEST_NBUCKETS 64
+#define TEST_NTHREADS 64
+#define TEST_NBUCKETS 16
 #define TEST_NELEMTS  1000
 
 typedef struct thread_data thread_data_t;
@@ -22,6 +22,7 @@ zm_atomic_uint_t test_counter = 0;
 static void* func(void *arg) {
     size_t input = 1;
     int tid, nelem_enq, nelem_deq, producer_b;
+    int trg_bucket = tid % TEST_NBUCKETS;
     struct zm_mpbqueue* queue;
     thread_data_t *data = (thread_data_t*) arg;
     tid   = data->tid;
@@ -34,7 +35,7 @@ static void* func(void *arg) {
     if(producer_b) { /* producer */
         size_t elem;
         for(elem=0; elem < nelem_enq; elem++) {
-            zm_mpbqueue_enqueue(queue, (void*) input, tid);
+            zm_mpbqueue_enqueue(queue, (void*) input, trg_bucket);
         }
     } else {           /* consumer */
         while(zm_atomic_load(&test_counter, zm_memord_acquire) < nelem_deq) {
