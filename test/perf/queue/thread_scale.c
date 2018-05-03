@@ -6,7 +6,8 @@
 #include <stdio.h>
 #include <omp.h>
 #include "zmtest_absqueue.h"
-#define TEST_NELEMTS  1000
+#define TEST_NELEMTS 64
+#define NITER (1024*32)
 
 /*-------------------------------------------------------------------------
  * Function: run
@@ -60,35 +61,37 @@ static inline void run() {
         #elif defined(ZMTEST_SPMC)
             producer_b = (tid == 0);
         #endif
-
             int elem;
-            if(producer_b) { /* producer */
-                for(elem=0; elem < nelem_enq; elem++) {
-        #if defined(ZMTEST_ALLOC_QELEM)
-                    input = malloc(sizeof *input);
-                    *input = 1;
-                    zm_absqueue_enqueue(&queue, (void*) input);
-        #else
-                    zm_absqueue_enqueue(&queue, (void*) &input);
-        #endif
-                }
-            } else {           /* consumer */
-                while(test_counter < nelem_deq) {
-                    int* elem = NULL;
-                    zm_absqueue_dequeue(&queue, (void**)&elem);
-                    if ((elem != NULL) && (*elem == 1)) {
-                        #pragma omp atomic
-                            test_counter++;
-        #if defined(ZMTEST_ALLOC_QELEM)
-                        free(elem);
-        #endif
+
+            for(int i = 0; i<NITER; i++) {
+                if(producer_b) { /* producer */
+                    for(elem=0; elem < nelem_enq; elem++) {
+            #if defined(ZMTEST_ALLOC_QELEM)
+                        input = malloc(sizeof *input);
+                        *input = 1;
+                        zm_absqueue_enqueue(&queue, (void*) input);
+            #else
+                        zm_absqueue_enqueue(&queue, (void*) &input);
+            #endif
+                    }
+                } else {           /* consumer */
+                    while(test_counter < nelem_deq) {
+                        int* elem = NULL;
+                        zm_absqueue_dequeue(&queue, (void**)&elem);
+                        if ((elem != NULL) && (*elem == 1)) {
+                            #pragma omp atomic
+                                test_counter++;
+            #if defined(ZMTEST_ALLOC_QELEM)
+                            free(elem);
+            #endif
+                        }
                     }
                 }
             }
         }
 
         t2 = omp_get_wtime();
-        printf("%d \t %lf\n", nthreads, (double)nelem_deq/(t2-t1));
+        printf("%d \t %lf\n", nthreads, (double)nelem_deq*NITER/(t2-t1));
     }
 
 } /* end run() */
