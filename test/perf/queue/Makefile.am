@@ -15,7 +15,8 @@ TESTS = \
 	thread_scale_spmc_gl \
 	thread_scale_spmc_ms \
 	enq_deq_pairs_fa \
-	thread_scale_mpsc_fa
+	thread_scale_mpsc_fa \
+	thscale_mpb
 
 #XFAIL_TESTS = 	enq_deq_pairs_fa \
 #		thread_scale_mpsc_fa
@@ -37,6 +38,7 @@ thread_scale_mpsc_fa_SOURCES = thread_scale.c
 thread_scale_mpsc_ms_SOURCES = thread_scale.c
 thread_scale_spmc_gl_SOURCES = thread_scale.c
 thread_scale_spmc_ms_SOURCES = thread_scale.c
+thscale_mpb_SOURCES 		 = thscale_mpb.c
 
 enq_deq_pairs_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_ALLOC_QELEM -fopenmp
 enq_deq_pairs_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_ALLOC_QELEM -fopenmp
@@ -45,11 +47,12 @@ enq_deq_pairs_fa_CFLAGS = -DZMTEST_USE_FAQUEUE -DZMTEST_ALLOC_QELEM -fopenmp
 thread_scale_mpmc_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_MPMC -DZMTEST_ALLOC_QELEM -fopenmp
 thread_scale_mpmc_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_MPMC -DZMTEST_ALLOC_QELEM -fopenmp
 thread_scale_mpsc_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
-thread_scale_mpsc_swp_CFLAGS = -DZMTEST_USE_SWPQUEUE -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
+thread_scale_mpsc_swp_CFLAGS = -DZMTEST_USE_SWPQUEUE -DZMTEST_MPSC -fopenmp
 thread_scale_mpsc_fa_CFLAGS = -DZMTEST_USE_FAQUEUE -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
 thread_scale_mpsc_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
 thread_scale_spmc_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_SPMC -DZMTEST_ALLOC_QELEM -fopenmp
 thread_scale_spmc_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_SPMC -DZMTEST_ALLOC_QELEM -fopenmp
+thscale_mpb_CFLAGS 		= -fopenmp
 
 enq_deq_pairs_gl_LDFLAGS = -fopenmp
 enq_deq_pairs_ms_LDFLAGS = -fopenmp
@@ -63,3 +66,4 @@ thread_scale_mpsc_fa_LDFLAGS = -fopenmp
 thread_scale_mpsc_ms_LDFLAGS = -fopenmp
 thread_scale_spmc_gl_LDFLAGS = -fopenmp
 thread_scale_spmc_ms_LDFLAGS = -fopenmp
+thscale_mpb_LDFLAGS = -fopenmp
