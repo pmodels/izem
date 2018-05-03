@@ -24,6 +24,10 @@ int zm_mpbqueue_init(struct zm_mpbqueue *q, int nbuckets) {
     /* multiples of 8 allow single operation, 64bit-width emptiness check  */
     /* TODO: replace the below assert with error handling */
     int llong_width = (int) sizeof(zm_atomic_llong_t);
+    /* Adjust nbuckets to allow < llong_width number of buckets */
+    /* FIXME: the user can supply a bucket id >= the original nbucket, which is erroneous */
+    if(nbuckets < llong_width)
+        nbuckets = llong_width;
     assert(nbuckets % llong_width == 0);
 
     /* allocate and initialize the buckets as SWP-based MPSC queues */
