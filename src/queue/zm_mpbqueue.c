@@ -112,9 +112,11 @@ int zm_mpbqueue_dequeue(struct zm_mpbqueue* q, void **data) {
             int j;
             for(j = 0; j < bucket_setsz; j++) {
                 int bucket_idx = offset * bucket_setsz + j;
-                if (q->bucket_states[bucket_idx] == NONEMPTY_BUCKET) {
+                if(!zm_swpqueue_isempty_weak(&q->buckets[bucket_idx])) {
                     zm_swpqueue_dequeue(&q->buckets[bucket_idx], data);
                     break;
+                } else {
+                    q->bucket_states[bucket_idx] = EMPTY_BUCKET;
                 }
             }
             if(j < bucket_setsz)
