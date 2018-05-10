@@ -10,6 +10,9 @@
 #define NONEMPTY_BUCKET 1
 #define INCONSISTENT_BUCKET 2
 
+#define MIN_BACKOFF 1
+#define MAX_BACKOFF 1024
+
 #define LOAD(addr)                  zm_atomic_load(addr, zm_memord_acquire)
 #define STORE(addr, val)            zm_atomic_store(addr, val, zm_memord_release)
 #define SWAP(addr, desire)          zm_atomic_exchange(addr, desire, zm_memord_acq_rel)
@@ -19,11 +22,43 @@
                                                                       zm_memord_acq_rel,\
                                                                       zm_memord_acquire)
 
+static inline int get_set_state(struct zm_mpbqueue *q, int offset) {
+    int llong_width  = (int) sizeof(long long);
+    int nbucket_sets = q->nbuckets/llong_width;
+    int bucket_setsz = llong_width/sizeof(char);
+
+    long long *bucket_state_sets = (long long *)q->bucket_states;
+    int *backoff_counters = q->backoff_counters;
+    int *backoff_bounds = q->backoff_bounds;;
+    int j, state = EMPTY_BUCKET;
+    if(LOAD(&bucket_state_sets[offset]) > EMPTY_BUCKET) {
+        state = NONEMPTY_BUCKET;
+    } else {
+        backoff_counters[offset]++;
+        if(backoff_counters[offset] >= backoff_bounds[offset]) {
+            for(j = 0; j < bucket_setsz; j++) {
+                int bucket_idx = offset * bucket_setsz + j;
+                if(!zm_swpqueue_isempty_weak(&q->buckets[bucket_idx])) {
+                    q->bucket_states[bucket_idx] = NONEMPTY_BUCKET;
+                    state = NONEMPTY_BUCKET;
+                    break;
+                }
+            }
+            if(j >= bucket_setsz) {
+                backoff_counters[offset] = 0;
+                if(backoff_bounds[offset] < MAX_BACKOFF)
+                    backoff_bounds[offset] *= 2;
+            }
+        }
+    }
+    return state;
+}
+
 
 int zm_mpbqueue_init(struct zm_mpbqueue *q, int nbuckets) {
     /* multiples of 8 allow single operation, 64bit-width emptiness check  */
     /* TODO: replace the below assert with error handling */
-    int llong_width = (int) sizeof(zm_atomic_llong_t);
+    int llong_width = (int) sizeof(long long);
     /* Adjust nbuckets to allow < llong_width number of buckets */
     /* FIXME: the user can supply a bucket id >= the original nbucket, which is erroneous */
     if(nbuckets < llong_width)
@@ -35,33 +70,28 @@ int zm_mpbqueue_init(struct zm_mpbqueue *q, int nbuckets) {
     for(int i = 0; i < nbuckets; i++)
         zm_swpqueue_init(&buckets[i]);
     /* initialze the state of all buckests to empty (0) */
-    zm_atomic_llong_t *bucket_state_sets = (zm_atomic_llong_t*) malloc(sizeof(zm_atomic_char_t) * nbuckets);
-    for(int i = 0; i < nbuckets/llong_width; i++)
-        STORE(&bucket_state_sets[i], EMPTY_BUCKET);
+    long long *bucket_state_sets = (long long *) malloc(sizeof(zm_atomic_char_t) * nbuckets);
+    int *backoff_counters        = (int *) malloc(sizeof(int) * (nbuckets/llong_width));
+    int *backoff_bounds          = (int *) malloc(sizeof(int) * (nbuckets/llong_width));
+    for(int i = 0; i < nbuckets/llong_width; i++) {
+        bucket_state_sets[i] = EMPTY_BUCKET;
+        backoff_counters[i] = 0;
+        backoff_bounds[i] = MIN_BACKOFF;
+    }
 
     q->buckets = buckets;
     q->nbuckets = nbuckets;
-    q->bucket_states = (zm_atomic_char_t*) bucket_state_sets;
+    q->backoff_counters = backoff_counters;
+    q->backoff_bounds = backoff_bounds;
+    q->bucket_states = (char*) bucket_state_sets;
 
     return 0;
 }
 
 int zm_mpbqueue_enqueue(struct zm_mpbqueue* q, void *data, int bucket_idx) {
 
-//    if(zm_swpqueue_isempty(&q->buckets[bucket_idx]))
-//        STORE(&q->bucket_states[bucket_idx], INCONSISTENT_BUCKET);
-
     /* Push to the queue at bucket_idx*/
     zm_swpqueue_enqueue(&q->buckets[bucket_idx], data);
-   // printf("enq\n");//fflush(stdout);
-
-    /* check first that the queue is not empty before setting the non-empty flag
-     * the consumer might have already dequeued the last element that was just enqeueud above,
-     * in which case, setting the non-empty flag is unnecessary. */
-    if(!zm_swpqueue_isempty_weak(&q->buckets[bucket_idx])) {
-        STORE(&q->bucket_states[bucket_idx], NONEMPTY_BUCKET);
-  //      printf("signal\n");//fflush(stdout);
-    }
 
     return 0;
 }
@@ -71,32 +101,19 @@ int zm_mpbqueue_dequeue(struct zm_mpbqueue* q, void **data) {
     *data = NULL;
 
     /* Check for a nonempty bucket in sets of bucket_setsz */
-    int llong_width  = (int) sizeof(zm_atomic_llong_t);
+    int llong_width  = (int) sizeof(long long);
     int nbucket_sets = q->nbuckets/llong_width;
-    int bucket_setsz = llong_width/sizeof(zm_atomic_char_t);
+    int bucket_setsz = llong_width/sizeof(char);
 
-    zm_atomic_llong_t *bucket_state_sets = (zm_atomic_llong_t *)q->bucket_states;
     int i;
     for(i = 0; i < nbucket_sets; i++) {
         int offset = (q->last_bucket_set + i) % nbucket_sets;
-        if(LOAD(&bucket_state_sets[offset]) > EMPTY_BUCKET) {
+        if(get_set_state(q, offset) > EMPTY_BUCKET) {
             int j;
             for(j = 0; j < bucket_setsz; j++) {
                 int bucket_idx = offset * bucket_setsz + j;
-                if (LOAD(&q->bucket_states[bucket_idx]) == NONEMPTY_BUCKET) {
-       //            printf("recv\n");//fflush(stdout);
-       //            assert(!zm_swpqueue_isempty(&q->buckets[bucket_idx]));
+                if (q->bucket_states[bucket_idx] == NONEMPTY_BUCKET) {
                     zm_swpqueue_dequeue(&q->buckets[bucket_idx], data);
-       //             assert(*data != NULL);
-                    /* soft check on emptiness */
-                    if(zm_swpqueue_isempty_weak(&q->buckets[bucket_idx])) {
-                        /* heavier check to confirm emptiness */
-                        if(zm_swpqueue_isempty_strong(&q->buckets[bucket_idx])) {
-                            /* reset the bucket state to avoid checking it again if it stays empty */
-                            STORE(&q->bucket_states[bucket_idx], EMPTY_BUCKET);
-       //                     printf("reset\n");//fflush(stdout);
-                        }
-                    }
                     break;
                 }
             }

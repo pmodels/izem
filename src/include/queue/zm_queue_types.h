@@ -74,7 +74,9 @@ struct zm_faqueue {
 struct zm_mpbqueue {
     zm_swpqueue_t *buckets;
     int nbuckets;
-    zm_atomic_char_t *bucket_states; /* 0: empty, 1: non-empty */
+    char *bucket_states; /* 0: empty, 1: non-empty */
+    int *backoff_counters;
+    int *backoff_bounds;
     int last_bucket_set;
 };
 
