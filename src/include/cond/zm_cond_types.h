@@ -17,4 +17,10 @@ struct zm_ccond {
     zm_atomic_uint_t flag;
 };
 
+struct zm_scount {
+    zm_atomic_uint_t count;
+    struct zm_ccond cvar;
+};
+
+
 #endif /* _IZEM_COND_TYPES_H */

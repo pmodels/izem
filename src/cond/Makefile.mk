@@ -4,4 +4,5 @@
 #
 
 zm_sources += \
-	cond/zm_ccond.c
+	cond/zm_ccond.c \
+	cond/zm_scount.c
