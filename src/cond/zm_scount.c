@@ -27,21 +27,20 @@ int zm_scount_wait(struct zm_scount *C, zm_lock_t *L) {
     return 0;
 }
 
-int zm_scount_signal(struct zm_scount *C) {
+int zm_scount_signal(struct zm_scount *C, int *out_count) {
     int ret = 0;
     if(C->count > 0) {
         C->count--;
         if(C->count == 0)
             ret = zm_ccond_signal(&C->cvar);
     }
+    *out_count = C->count;
     return ret;
 }
 
 /* Forced wake up regardless of the counter */
 int zm_scond_signalf(struct zm_scount *C) {
     int ret = 0;
-    if(C->count > 0)
-        C->count--;
     /* wakeup signal regardless of the counter value */
     ret = zm_ccond_signal(&C->cvar);
 

@@ -44,7 +44,8 @@ static void* run(void *arg) {
         counter++;
         for(int i = 1; i<TEST_NTHREADS; i++) {
             int trg = (tid + i) % TEST_NTHREADS;
-            zm_scount_signal(&scounts[trg]);
+            int out_count; /* ignored */
+            zm_scount_signal(&scounts[trg], &out_count);
         }
 
         zm_lock_release(&glock);   /* Release the lock */
