@@ -71,6 +71,8 @@ struct zm_faqueue {
     zm_atomic_ptr_t     seg_tail;
 };
 
+typedef struct zm_mpbqueue zm_mpbqueue_t;
+
 struct zm_mpbqueue {
     zm_swpqueue_t *buckets;
     int nbuckets;
