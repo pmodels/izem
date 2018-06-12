@@ -24,7 +24,7 @@ int zm_scount_wait(struct zm_scount *C, zm_lock_t *L) {
     int ret = 0;
     if(C->count > 0)
         ret = zm_ccond_wait(&C->cvar, L);
-    return 0;
+    return ret;
 }
 
 int zm_scount_signal(struct zm_scount *C, int *out_count) {

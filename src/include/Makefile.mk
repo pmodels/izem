@@ -19,6 +19,7 @@ zm_headers = \
 	include/cond/zm_cond_types.h \
 	include/cond/zm_ccond.h \
 	include/cond/zm_scount.h \
+	include/cond/zm_wskip.h \
 	include/queue/zm_queue_types.h \
 	include/queue/zm_glqueue.h \
 	include/queue/zm_swpqueue.h \
