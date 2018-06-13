@@ -89,4 +89,15 @@ struct zm_mcsp {
     zm_mcs_t low_p __attribute__((aligned(64)));
 };
 
+#include "cond/zm_cond_types.h"
+struct zm_hmpr_pnode {
+    unsigned p; /* priority */
+    zm_mcs_qnode_t *qnode;
+};
+
+struct zm_hmpr {
+    zm_hmcs_t lock;
+    zm_mcs_t waitq;
+};
+
 #endif /* _IZEM_LOCK_TYPES_H */

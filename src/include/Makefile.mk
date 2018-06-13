@@ -15,6 +15,7 @@ zm_headers = \
 	include/lock/zm_tlp.h \
 	include/lock/zm_mcsp.h \
 	include/lock/zm_hmcs.h \
+	include/lock/zm_hmpr.h \
 	include/cond/zm_cond.h \
 	include/cond/zm_cond_types.h \
 	include/cond/zm_ccond.h \
