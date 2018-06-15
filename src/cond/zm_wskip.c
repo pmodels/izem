@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <hwloc.h>
 #include "lock/zm_mcs.h"
+#include "cond/zm_wskip.h"
 
 #define ZM_WAIT 0
 #define ZM_WAKE 1
@@ -67,8 +68,10 @@ static void* new_wskip() {
     return L;
 }
 
-/* Main routines */
-static inline int wait(struct zm_mcs *L, zm_mcs_qnode_t* I) {
+/* This routine is just to insert myself into the queue and block
+ * whoever comes after me. */
+static inline int enq(struct zm_mcs *L, zm_mcs_qnode_t* I, int *wait) {
+    *wait = 1;
     zm_mcs_qnode_t* pred;
     int status = zm_atomic_exchange(&I->status, ZM_WAIT, zm_memord_acq_rel);
     /* wake() passed this node and is in the processs of setting it to RECYCLE */
@@ -83,12 +86,24 @@ static inline int wait(struct zm_mcs *L, zm_mcs_qnode_t* I) {
         pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
         if((zm_ptr_t)pred == ZM_NULL) {
             zm_atomic_store(&I->status, ZM_WAKE, zm_memord_release);
+            *wait = 0;
             return 0;
         }
         zm_atomic_store(&pred->next, (zm_ptr_t)I, zm_memord_release);
     }
 
-    while(zm_atomic_load(&I->status, zm_memord_acquire) == ZM_WAIT)
+    return 0;
+}
+
+/* Main routines */
+static inline int wait(struct zm_mcs *L, zm_mcs_qnode_t* I) {
+    int wait = 0;
+    /* First, insert the qnode into the queue */
+    enq(L,I, &wait);
+    /* wait in line if necessary */
+    if (wait)
+        while(zm_atomic_load(&I->status, zm_memord_acquire) != ZM_WAKE &&
+              zm_atomic_load(&I->status, zm_memord_acquire) != ZM_RECYCLE)
             ; /* SPIN */
 
     return 0;
@@ -117,7 +132,6 @@ static inline int wake(struct zm_mcs *L, zm_mcs_qnode_t *I) {
                                          zm_memord_acq_rel,
                                          zm_memord_acquire))
             break;
-
         zm_atomic_store(&next->status, ZM_CHECK, zm_memord_release);
         /* modify next for reverse traversal later */
         zm_atomic_store(&cur_node->next, pred, zm_memord_release);
@@ -143,15 +157,20 @@ static inline int wake(struct zm_mcs *L, zm_mcs_qnode_t *I) {
             return 0;
         while(zm_atomic_load(&cur_node->next, zm_memord_acquire) == ZM_NULL)
             ; /* SPIN */
+        zm_atomic_store(&((zm_mcs_qnode_t*)zm_atomic_load(&cur_node->next, zm_memord_acquire))->status, ZM_WAKE, zm_memord_release);
     }
-    zm_atomic_store(&((zm_mcs_qnode_t*)zm_atomic_load(&cur_node->next, zm_memord_acquire))->status, ZM_WAKE, zm_memord_release);
     zm_atomic_store(&I->next, NULL, zm_memord_release);
 
     return 0;
 }
 
 static inline int skip(zm_mcs_qnode_t *I) {
-    zm_atomic_store(&I->status, ZM_SKIP, zm_memord_release);
+    int status = ZM_WAIT;
+    zm_atomic_compare_exchange_strong(&I->status,
+                                      &status,
+                                      ZM_SKIP,
+                                      zm_memord_acq_rel,
+                                      zm_memord_acquire);
     return 0;
 }
 
@@ -166,6 +185,11 @@ int wskip_wait(struct zm_mcs *L, zm_mcs_qnode_t** I) {
     }
     *I= &L->local_nodes[tid];
     return wait(L, *I);
+}
+
+int wskip_enq(struct zm_mcs *L, zm_mcs_qnode_t *I) {
+    int wait; /* unused */
+    return enq(L, I, &wait);
 }
 
 int wskip_wake(struct zm_mcs *L, zm_mcs_qnode_t *I) {
@@ -201,6 +225,10 @@ int zm_wskip_destroy(zm_mcs_t *L) {
 
 int zm_wskip_wait(zm_mcs_t L, zm_mcs_qnode_t** I) {
     return wskip_wait((struct zm_mcs*)(void *)L, I);
+}
+
+int zm_wskip_enq(zm_mcs_t L, zm_mcs_qnode_t* I) {
+    return wskip_enq((struct zm_mcs*)(void *)L, I);
 }
 
 int zm_wskip_wake(zm_mcs_t L, zm_mcs_qnode_t *I) {

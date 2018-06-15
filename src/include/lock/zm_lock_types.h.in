@@ -97,7 +97,10 @@ struct zm_hmpr_pnode {
 
 struct zm_hmpr {
     zm_hmcs_t lock;
-    zm_mcs_t waitq;
+    int go_straight;
+    zm_mcs_qnode_t znode;
+    int low_p_acq __attribute__((aligned(64)));
+    zm_mcs_t waitq __attribute__((aligned(64)));
 };
 
 #endif /* _IZEM_LOCK_TYPES_H */

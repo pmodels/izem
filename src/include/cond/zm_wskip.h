@@ -11,6 +11,7 @@
 int zm_wskip_init(zm_mcs_t*);
 int zm_wskip_destroy(zm_mcs_t*);
 int zm_wskip_wait(zm_mcs_t, zm_mcs_qnode_t**);
+int zm_wskip_enq(zm_mcs_t, zm_mcs_qnode_t*);
 int zm_wskip_wake(zm_mcs_t, zm_mcs_qnode_t*);
 int zm_wskip_skip(zm_mcs_qnode_t*);
 int zm_wskip_nowaiters(zm_mcs_t, zm_mcs_qnode_t*);
