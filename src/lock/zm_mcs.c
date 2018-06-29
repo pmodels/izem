@@ -75,9 +75,10 @@ static inline int acquire_c(struct zm_mcs *L, zm_mcs_qnode_t* I) {
 static inline int tryacq_c(struct zm_mcs *L, zm_mcs_qnode_t* I, int *success) {
     int acquired  = 0;
     zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
+    zm_ptr_t expected = ZM_NULL;
     if(zm_atomic_compare_exchange_strong(&L->lock,
-                                         (zm_ptr_t*)&I,
-                                         ZM_NULL,
+                                         &expected,
+                                         (zm_ptr_t)I,
                                          zm_memord_acq_rel,
                                          zm_memord_acquire))
         acquired = 1;

@@ -14,15 +14,16 @@ char cache_lines[640] = {0};
 int indices [] = {3,6,1,7,0,2,9,4,8,5};
 
 static void* run(void *arg) {
-     int iter;
+     int count = 0;
      zm_abslock_t *lock = (zm_abslock_t*) arg;
-     for(iter=0; iter<TEST_NITER; iter++) {
+     while (count < TEST) {
          int success = 0;
          int err =  zm_abslock_tryacq(lock, &success);
          if(err==0) {  /* Lock successfully acquired */
             if (success) {
                 for(int i = 0; i < 10; i++)
                     cache_lines[indices[i]] += cache_lines[indices[9-i]];
+                count++;
                 zm_abslock_release(lock);   /* Release the lock */
             }
          } else {

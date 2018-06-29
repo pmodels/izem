@@ -157,6 +157,15 @@ static inline void acquire_root(struct hnode * L, zm_mcs_qnode_t *I) {
     return;
 }
 
+static inline void tryacq_root(struct hnode * L, zm_mcs_qnode_t *I, int *success) {
+    zm_ptr_t expected = ZM_NULL;
+    // Prepare the node for use.
+    reuse_qnode(I);
+    *success = CAS(&(L->lock), &expected, (zm_ptr_t)I);
+
+    return;
+}
+
 static inline void release_root(struct hnode * L, zm_mcs_qnode_t *I) {
     // Top level release is usual MCS
     // At the top level MCS we always writr COHORT_START since
@@ -276,6 +285,17 @@ static inline void acquire_from_leaf(int level, struct leaf *L){
         return;
     }
     acquire_helper(level, L->cur_node, &L->I);
+    return;
+}
+
+static inline void tryacq_from_leaf(int level, struct leaf *L, int *success){
+    *success = 0;
+    if((zm_ptr_t)L->cur_node->lock == ZM_NULL
+    && (zm_ptr_t)L->root_node->lock == ZM_NULL) {
+        tryacq_root(L->root_node, &L->I, success);
+        if (*success)
+            L->took_fast_path = TRUE;
+    }
     return;
 }
 
@@ -459,12 +479,12 @@ static inline void hmcs_acquire(struct lock *L){
     acquire_from_leaf(L->levels, L->leaf_nodes[tid]);
 }
 
-static inline void hmcs_tryacq(struct lock *L){
+static inline void hmcs_tryacq(struct lock *L, int *success){
     if (zm_unlikely(tid == -1)) {
         check_affinity(L->topo);
         tid = get_hwthread_id(L->topo);
     }
-    acquire_from_leaf(L->levels, L->leaf_nodes[tid]);
+    tryacq_from_leaf(L->levels, L->leaf_nodes[tid], success);
 }
 
 static inline void hmcs_release(struct lock *L){
@@ -491,8 +511,8 @@ int zm_hmcs_acquire(zm_hmcs_t L){
     return 0;
 }
 
-int zm_hmcs_tryacq(zm_hmcs_t L){
-    hmcs_tryacq((struct lock*)L);
+int zm_hmcs_tryacq(zm_hmcs_t L, int *success){
+    hmcs_tryacq((struct lock*)L, success);
     return 0;
 }
 int zm_hmcs_release(zm_hmcs_t L){
