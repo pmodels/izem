@@ -16,5 +16,6 @@ int zm_mpbqueue_init(struct zm_mpbqueue *, int);
 int zm_mpbqueue_enqueue(struct zm_mpbqueue* q, void *data, int);
 int zm_mpbqueue_dequeue(struct zm_mpbqueue* q, void **data);
 int zm_mpbqueue_dequeue_bulk(struct zm_mpbqueue* q, void*[], int, int*);
+int zm_mpbqueue_dequeue_range(struct zm_mpbqueue* q, void*[], int, int, int, int*);
 
 #endif /* _ZM_MPBQUEUE_H */

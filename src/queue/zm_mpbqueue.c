@@ -160,3 +160,21 @@ int zm_mpbqueue_dequeue_bulk(struct zm_mpbqueue* q, void **data, int in_count, i
     *out_count = out_idx + 1;
     return 1;
 }
+
+/* dequeue in bulk from a defined range of buckets [start,stop[
+ * */
+
+int zm_mpbqueue_dequeue_range(struct zm_mpbqueue* q, void **data, int start, int stop, int in_count, int *out_count) {
+    assert ((start >= 0) && (stop <= q->nbuckets) && "[start,stop[ out of range");
+    int j, count = 0;
+    for(j = start; j < stop; j++) {
+        if(zm_swpqueue_isempty_weak(&q->buckets[j]))
+            continue;
+        zm_swpqueue_dequeue(&q->buckets[j], &data[count]);
+        count++;
+        if(count >= in_count)
+            break;
+    }
+    *out_count = count;
+    return 1;
+}
