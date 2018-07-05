@@ -23,12 +23,11 @@ zm_atomic_uint_t test_counter = 0;
 static void* func(void *arg) {
     size_t input = 1;
     int tid, nelem_enq, nelem_deq, producer_b;
-    int trg_bucket = tid % TEST_NBUCKETS;
     struct zm_mpbqueue* queue;
     thread_data_t *data = (thread_data_t*) arg;
     tid   = data->tid;
     queue = data->queue;
-
+    int trg_bucket = tid % TEST_NBUCKETS;
     nelem_enq = TEST_NELEMTS;
     nelem_deq = (TEST_NTHREADS-1)*TEST_NELEMTS;
     producer_b = (tid != 0);
