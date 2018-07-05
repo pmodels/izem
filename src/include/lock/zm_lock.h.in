@@ -42,6 +42,7 @@
 #define zm_lock_destroy(L)          zm_mcs_destroy(L)
 /* Context-less routines */
 #define zm_lock_acquire(L)          zm_mcs_acquire(*(L))
+#define zm_lock_tryacq(L, acq)      zm_mcs_tryacq(*(L), acq)
 #define zm_lock_acquire_l(L)        zm_mcs_acquire(*(L))
 #define zm_lock_release(L)          zm_mcs_release(*(L))
 /* Context-full routines */
@@ -59,6 +60,7 @@
 #define zm_lock_destroy             zm_hmcs_destroy
 /* Context-less routines */
 #define zm_lock_acquire(L)          zm_hmcs_acquire(*(L))
+#define zm_lock_tryacq(L, acq)      zm_hmcs_tryacq(*(L), acq)
 #define zm_lock_acquire_l(L)        zm_hmcs_acquire(*(L))
 #define zm_lock_release(L)          zm_hmcs_release(*(L))
 /* Context-full routines */

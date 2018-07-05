@@ -49,6 +49,7 @@ typedef zm_ptr_t zm_hmcs_t;
 /* Two-Level Priority */
 #define ZM_TICKET   1
 #define ZM_MCS      2
+#define ZM_HMCS     3
 
 #define ZM_TLP_HIGH_P @ZM_TLP_HIGH_P@
 #define ZM_TLP_LOW_P @ZM_TLP_LOW_P@
