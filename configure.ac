@@ -291,6 +291,44 @@ esac
 
 AC_SUBST(ZM_COND_IF)
 
+# Default queue interface
+
+AC_ARG_WITH([queue_if],
+[  --with-queue-if@<:@=QUEUE_IF@:>@   define the default queue interface being
+                          exposed by Izem (i.e., zm_queue_t and associated
+                          routines. QUEUE_IF represents the name of the
+                          underlying queue to be used. Possible values are:
+                          gl   - Global lock
+                          ms   - TBA
+                          swp  - TBA
+                          fa   - Fetch and add
+                          runtime - Runtime selection through ZM_QUEUE_IF environment variable
+],,
+[with_queue_if=gl])
+
+case "$with_queue_if" in
+    gl)
+        ZM_QUEUE_CONF=ZM_GLQUEUE_IF
+    ;;
+    ms)
+        ZM_QUEUE_CONF=ZM_MSQUEUE_IF
+    ;;
+    swp)
+        ZM_QUEUE_CONF=ZM_SWPQUEUE_IF
+    ;;
+    fa)
+        ZM_QUEUE_CONF=ZM_FAQUEUE_IF
+    ;;
+    # mbpqueue has a different function signature, so won't be supported here
+    runtime)
+        ZM_QUEUE_CONF=ZM_RUNTIMEQUEUE_IF
+    ;;
+    *)
+        AC_MSG_ERROR([Unknown value $with_queue_if for with-queue-if])
+    ;;
+esac
+
+AC_SUBST(ZM_QUEUE_CONF)
 
 AC_ARG_WITH([hwloc],
             [AS_HELP_STRING([--with-hwloc], [Set path to hwloc. Default: auto detect.])],
@@ -340,6 +378,7 @@ AC_CONFIG_FILES([Makefile
                  src/include/lock/zm_lock.h
                  src/include/lock/zm_lock_types.h
                  src/include/cond/zm_cond.h
+                 src/include/queue/zm_queue.h
                  test/Makefile
                  test/regres/Makefile
                  test/regres/lock/Makefile

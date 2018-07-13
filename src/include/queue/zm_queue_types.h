@@ -71,6 +71,8 @@ struct zm_faqueue {
     zm_atomic_ptr_t     seg_tail;
 };
 
+typedef struct zm_mpbqueue zm_mpbqueue_t;
+
 struct zm_mpbqueue {
     zm_swpqueue_t *buckets;
     int nbuckets;
@@ -79,5 +81,15 @@ struct zm_mpbqueue {
     int *backoff_bounds;
     int last_bucket_set;
 };
+
+/* Common structure to allow runtime selection */
+
+typedef union zm_queue {
+    zm_glqueue_t  glqueue;
+    zm_msqueue_t  msqueue;
+    zm_swpqueue_t swpqueue;
+    zm_faqueue_t  faqueue;
+    zm_mpbqueue_t mpbqueue;
+} zm_queue_t;
 
 #endif /* _ZM_QUEUE_TYPES_H */

@@ -4,6 +4,7 @@
 #
 
 zm_sources += \
+	queue/zm_queue.c \
 	queue/zm_glqueue.c \
 	queue/zm_swpqueue.c \
 	queue/zm_faqueue.c \
