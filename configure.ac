@@ -344,6 +344,7 @@ AC_CONFIG_FILES([Makefile
                  test/regres/Makefile
                  test/regres/lock/Makefile
                  test/regres/cond/Makefile
+                 test/regres/mem/Makefile
                  test/regres/list/Makefile
                  test/regres/queue/Makefile
                  test/perf/Makefile

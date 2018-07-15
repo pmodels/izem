@@ -4,5 +4,5 @@
 #
 
 zm_sources += \
-	mem/zm_hzdptr.c
-
+	mem/zm_hzdptr.c \
+	mem/zm_pool.c
