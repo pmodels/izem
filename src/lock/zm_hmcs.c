@@ -329,7 +329,29 @@ static int get_hwthread_id(hwloc_topology_t topo){
 }
 
 static void set_hierarchy(struct lock *L, int *max_threads, int** particip_per_level) {
-    int max_depth, levels = 0, max_levels = HMCS_DEFAULT_MAX_LEVELS;
+    int max_depth, levels = 0, max_levels = HMCS_DEFAULT_MAX_LEVELS, explicit_levels = 0;
+    char *s = getenv("ZM_HMCS_MAX_LEVELS");
+    if (s != NULL)
+        max_levels = atoi(s);
+    int depths[max_levels];
+    int idx = 0;
+    /* advice to users: run `hwloc-ls -s --no-io --no-icaches` and choose
+     * depths of interest in ascending order. The first depth must be `0' */
+
+    s = getenv("ZM_HMCS_EXPLICIT_LEVELS");
+    if (s != NULL) {
+        explicit_levels = 1;
+        char* token;
+        token = strtok(s,",");
+        while(token != NULL) {
+            depths[idx] = atoi(token);
+            if (idx == 0)
+                assert(depths[idx] == 0 && "the first depth must be machine level (i.e., depth 0), run `hwloc-ls -s --no-io --no-icaches` and choose appropriate depth values");
+            idx++;
+            token = strtok(NULL,",");
+        }
+        assert(idx == max_levels);
+    }
 
     hwloc_topology_init(&L->topo);
     hwloc_topology_load(L->topo);
@@ -341,20 +363,34 @@ static void set_hierarchy(struct lock *L, int *max_threads, int** particip_per_l
 
     *particip_per_level = (int*) malloc(max_levels * sizeof(int));
     int prev_nobjs = -1;
-    int d;
-    for (d = max_depth - 2; d > 1; d--) {
-        int cur_nobjs = hwloc_get_nbobjs_by_depth(L->topo, d);
-        /* Check if this level has a hierarchical impact */
-        if(cur_nobjs != prev_nobjs) {
-            prev_nobjs = cur_nobjs;
-            (*particip_per_level)[levels] = (*max_threads)/cur_nobjs;
-            levels++;
-            if(levels >= max_levels - 1)
-                break;
+    if(!explicit_levels) {
+        for (int d = max_depth - 2; d > 1; d--) {
+            int cur_nobjs = hwloc_get_nbobjs_by_depth(L->topo, d);
+            /* Check if this level has a hierarchical impact */
+            if(cur_nobjs != prev_nobjs) {
+                prev_nobjs = cur_nobjs;
+                (*particip_per_level)[levels] = (*max_threads)/cur_nobjs;
+                levels++;
+                if(levels >= max_levels - 1)
+                    break;
+            }
+        }
+        (*particip_per_level)[levels] = *max_threads;
+        levels++;
+    } else {
+        for(int i = max_levels - 1; i >= 0; i--){
+            int d = depths[i];
+            int cur_nobjs = hwloc_get_nbobjs_by_depth(L->topo, d);
+            /* Check if this level has a hierarchical impact */
+            if(cur_nobjs != prev_nobjs) {
+                prev_nobjs = cur_nobjs;
+                (*particip_per_level)[levels] = (*max_threads)/cur_nobjs;
+                levels++;
+            } else {
+                assert(0 && "plz choose levels that have a hierarchical impact");
+            }
         }
     }
-    (*particip_per_level)[levels] = *max_threads;
-    levels++;
 
     L->levels = levels;
 }
