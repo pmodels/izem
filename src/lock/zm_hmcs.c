@@ -330,6 +330,7 @@ static int get_hwthread_id(hwloc_topology_t topo){
 
 static void set_hierarchy(struct lock *L, int *max_threads, int** particip_per_level) {
     int max_depth, levels = 0, max_levels = HMCS_DEFAULT_MAX_LEVELS, explicit_levels = 0;
+    char tmp[20];
     char *s = getenv("ZM_HMCS_MAX_LEVELS");
     if (s != NULL)
         max_levels = atoi(s);
@@ -340,9 +341,10 @@ static void set_hierarchy(struct lock *L, int *max_threads, int** particip_per_l
 
     s = getenv("ZM_HMCS_EXPLICIT_LEVELS");
     if (s != NULL) {
+        strcpy(tmp, s);
         explicit_levels = 1;
         char* token;
-        token = strtok(s,",");
+        token = strtok(tmp,",");
         while(token != NULL) {
             depths[idx] = atoi(token);
             if (idx == 0)
