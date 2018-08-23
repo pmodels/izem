@@ -30,7 +30,7 @@ static void* func(void *arg) {
     unsigned short xsubi[3] = {tid, id, element_size};
     void **ptrs = (void *)malloc(sizeof(void *) * TEST_NELEMTS);
 
-    int r, num_elements = 0;
+    int r = 0, num_elements = 0;
     do {
         double rand = erand48(xsubi);
         if (rand < 0.5) {

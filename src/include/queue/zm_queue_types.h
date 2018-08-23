@@ -6,6 +6,7 @@
 #ifndef _ZM_QUEUE_TYPES_H
 #define _ZM_QUEUE_TYPES_H
 #include "common/zm_common.h"
+#include "mem/zm_pool.h"
 #include <pthread.h>
 #include <limits.h>
 
@@ -40,6 +41,7 @@ struct zm_msqnode {
 struct zm_msqueue {
     zm_atomic_ptr_t head ZM_ALLIGN_TO_CACHELINE;
     zm_atomic_ptr_t tail ZM_ALLIGN_TO_CACHELINE;
+    zm_pool_t pool;
 };
 
 /* faqueue */
