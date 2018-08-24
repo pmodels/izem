@@ -31,7 +31,7 @@ static inline void run() {
 
     int nthreads;
     for (nthreads = 2; nthreads <= omp_get_max_threads(); nthreads *= 2) {
-        zm_swpqueue_init_explicit(&queue, omp_get_thread_num());
+        zm_swpqueue_init_explicit(&queue);
         int nelem_enq, nelem_deq;
 
         nelem_enq = TEST_NELEMTS/(nthreads-1);
@@ -50,18 +50,18 @@ static inline void run() {
             for(int i = 0; i<NITER; i++) {
                 if(producer_b) { /* producer */
                     for(elem=0; elem < nelem_enq; elem++) {
-                        zm_pool_alloc(pool, tid, (void**)&input);
+                        zm_pool_alloc(pool, (void**)&input);
                         *input = 1;
-                        zm_swpqueue_enqueue_explicit(&queue, (void*) input, tid);
+                        zm_swpqueue_enqueue_explicit(&queue, (void*) input);
                     }
                 } else {           /* consumer */
                     while(test_counter < nelem_deq) {
                         int* elem = NULL;
-                        zm_swpqueue_dequeue_explicit(&queue, (void**)&elem, tid);
+                        zm_swpqueue_dequeue_explicit(&queue, (void**)&elem);
                         if ((elem != NULL) && (*elem == 1)) {
                             #pragma omp atomic
                                 test_counter++;
-                            zm_pool_free(pool, tid, elem);
+                            zm_pool_free(pool, elem);
                         }
                     }
                 }
