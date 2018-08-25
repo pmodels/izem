@@ -53,3 +53,44 @@ int zm_swpqueue_isempty_strong(zm_swpqueue_t* q) {
     tail = (zm_swpqnode_t*) zm_atomic_load(&q->tail, zm_memord_acquire);
     return ((head->next == ZM_NULL) && (head == tail));
 }
+
+int zm_swpqueue_init_explicit(zm_swpqueue_t *q) {
+
+    zm_pool_create(sizeof(zm_swpqnode_t), &q->pool);
+    zm_swpqnode_t* node;
+    zm_pool_alloc(q->pool, (void**)&node);
+    node->data = NULL;
+    node->next = ZM_NULL;
+    zm_atomic_store(&q->head, (zm_ptr_t)node, zm_memord_release);
+    zm_atomic_store(&q->tail, (zm_ptr_t)node, zm_memord_release);
+    return 0;
+}
+
+int zm_swpqueue_enqueue_explicit(zm_swpqueue_t* q, void *data) {
+    zm_swpqnode_t* pred;
+    zm_swpqnode_t* node;
+    zm_pool_alloc(q->pool, (void**)&node);
+    node->data = data;
+    zm_atomic_store(&node->next, ZM_NULL, zm_memord_release);
+    pred = (zm_swpqnode_t*)zm_atomic_exchange(&q->tail, (zm_ptr_t)node, zm_memord_acq_rel);
+    zm_atomic_store(&pred->next, (zm_ptr_t)node, zm_memord_release);
+    return 0;
+}
+
+int zm_swpqueue_dequeue_explicit(zm_swpqueue_t* q, void **data) {
+    zm_swpqnode_t* head;
+    zm_ptr_t next;
+    *data = NULL;
+    head = (zm_swpqnode_t*) zm_atomic_load(&q->head, zm_memord_acquire);
+    /* At least one element in the queue:
+            ==> head != tail
+            ==> no consistency issues between enqueuers and dequeuers */
+    if (head->next != ZM_NULL) {
+        next = (zm_ptr_t) zm_atomic_load(&head->next, zm_memord_acquire);
+        zm_atomic_store(&q->head, next, zm_memord_release);
+        *data = ((zm_swpqnode_t*)next)->data;
+        zm_pool_free(q->pool, (void*)head);
+    }
+    return 1;
+}
+

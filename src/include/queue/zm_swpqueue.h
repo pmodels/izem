@@ -15,4 +15,9 @@ int zm_swpqueue_dequeue(zm_swpqueue_t* q, void **data);
 int zm_swpqueue_isempty_weak(zm_swpqueue_t* q);
 int zm_swpqueue_isempty_strong(zm_swpqueue_t* q);
 
+int zm_swpqueue_init_explicit(zm_swpqueue_t *);
+int zm_swpqueue_enqueue_explicit(zm_swpqueue_t* q, void *data);
+int zm_swpqueue_dequeue_explicit(zm_swpqueue_t* q, void **data);
+
+
 #endif /* _ZM_SWPQUEUE_H */
