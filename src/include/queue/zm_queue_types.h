@@ -41,7 +41,7 @@ struct zm_msqnode {
 struct zm_msqueue {
     zm_atomic_ptr_t head ZM_ALLIGN_TO_CACHELINE;
     zm_atomic_ptr_t tail ZM_ALLIGN_TO_CACHELINE;
-    zm_pool_t pool;
+    zm_pool_t pool ZM_ALLIGN_TO_CACHELINE;
 };
 
 /* faqueue */

@@ -9,7 +9,8 @@
 #include <pthread.h>
 #include <mem/zm_pool.h>
 
-#define TEST_NTHREADS  3
+#define TEST_NTHREADS        8
+#define TEST_NTHREADS_PARENT 8
 #define TEST_NELEMTS   20000
 #define NUM_OPERATIONS 30000
 
@@ -43,8 +44,8 @@ static void* func(void *arg) {
                 continue;
             for (int i = 0; i < num_allocs; i++) {
                 void *ptr = NULL;
-                zm_pool_alloc(pool, tid, &ptr);
-                memset(ptr, id, element_size);
+                zm_pool_alloc(pool, &ptr);
+                __builtin_memset(ptr, id, element_size);
                 ptrs[num_elements++] = ptr;
             }
         } else {
@@ -64,7 +65,7 @@ static void* func(void *arg) {
                         abort();
                     }
                 }
-                zm_pool_free(pool, tid, ptr);
+                zm_pool_free(pool, ptr);
             }
         }
 
@@ -80,7 +81,7 @@ static void* func(void *arg) {
                 abort();
             }
         }
-        zm_pool_free(pool, tid, ptr);
+        zm_pool_free(pool, ptr);
     }
 
     free(ptrs);
@@ -97,16 +98,18 @@ static void* func(void *arg) {
  *         Failure: 1
  *-------------------------------------------------------------------------
  */
-static void run() {
+static void *run(void *arg) {
     pthread_t threads[TEST_NTHREADS];
     thread_data_t data[TEST_NTHREADS];
 
-    const size_t element_sizes[] = {64, 128, 256, 1024};
+    // const size_t element_sizes[] = {1, 64, 256, 1024};
+    const size_t element_sizes[] = {1, 2, 4, 8, 16 ,7 ,5, 3, 2, 1, 64, 128, 256, 1024, 1, 3, 5, 6, 8};
+    // const size_t element_sizes[] = {1, 2};
 
     for (int i = 0; i < sizeof(element_sizes) / sizeof(const size_t); i++) {
         zm_pool_t pool;
         zm_pool_create(element_sizes[i], &pool);
-
+        printf("trying %d\n", (int) element_sizes[i]);
         for (int tid = 0; tid < TEST_NTHREADS; tid++) {
             data[tid].tid = tid;
             data[tid].element_size = element_sizes[i];
@@ -120,8 +123,14 @@ static void run() {
 
         zm_pool_destroy(&pool);
     }
+    return NULL;
 }
 
 int main(int argc, char **argv) {
-  run();
+    pthread_t threads[TEST_NTHREADS_PARENT];
+    for (int tid = 1; tid < TEST_NTHREADS_PARENT; tid++)
+        pthread_create(&threads[tid], NULL, run, NULL);
+    run(NULL);
+    for (int tid = 1; tid < TEST_NTHREADS_PARENT; tid++)
+        pthread_join(threads[tid], NULL);
 }
