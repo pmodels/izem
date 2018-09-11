@@ -5,14 +5,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include "zmtest_absqueue.h"
+#include "queue/zm_queue.h"
 #define TEST_NTHREADS 3
 #define TEST_NELEMTS  1000
 
 typedef struct thread_data thread_data_t;
 struct thread_data {
     int tid;
-    zm_absqueue_t* queue;
+    zm_queue_t* queue;
 };
 
 zm_atomic_uint_t test_counter = 0;
@@ -24,7 +24,7 @@ static void* func(void *arg) {
     size_t input = 1;
 #endif
     int tid, nelem_enq, nelem_deq, producer_b;
-    zm_absqueue_t* queue;
+    zm_queue_t* queue;
     thread_data_t *data = (thread_data_t*) arg;
     tid   = data->tid;
     queue = data->queue;
@@ -49,15 +49,15 @@ static void* func(void *arg) {
 #if defined(ZMTEST_ALLOC_QELEM)
             input = malloc(sizeof *input);
             *input = 1;
-            zm_absqueue_enqueue(queue, (void*) input);
+            zm_queue_enqueue(queue, (void*) input);
 #else
-            zm_absqueue_enqueue(queue, (void*) input);
+            zm_queue_enqueue(queue, (void*) input);
 #endif
         }
     } else {           /* consumer */
         while(zm_atomic_load(&test_counter, zm_memord_acquire) < nelem_deq) {
             void* elem;
-            zm_absqueue_dequeue(queue, (void**)&elem);
+            zm_queue_dequeue(queue, (void**)&elem);
             if ((elem != NULL) && ((size_t)elem == 1)) {
                     zm_atomic_fetch_add(&test_counter, 1, zm_memord_acq_rel);
 #if defined(ZMTEST_ALLOC_QELEM)
@@ -86,8 +86,8 @@ static void run() {
     pthread_t threads[TEST_NTHREADS];
     thread_data_t data[TEST_NTHREADS];
 
-    zm_absqueue_t queue;
-    zm_absqueue_init(&queue);
+    zm_queue_t queue;
+    zm_queue_init(&queue);
 
     zm_atomic_store(&test_counter, 0, zm_memord_release);
 
