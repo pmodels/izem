@@ -49,19 +49,25 @@ static void* func(void *arg) {
 #if defined(ZMTEST_ALLOC_QELEM)
             input = malloc(sizeof *input);
             *input = 1;
-            zm_queue_enqueue(queue, (void*) input);
-#else
-            zm_queue_enqueue(queue, (void*) input);
 #endif
+            zm_queue_enqueue(queue, (void*) input);
         }
     } else {           /* consumer */
         while(zm_atomic_load(&test_counter, zm_memord_acquire) < nelem_deq) {
             void* elem;
             zm_queue_dequeue(queue, (void**)&elem);
-            if ((elem != NULL) && ((size_t)elem == 1)) {
-                    zm_atomic_fetch_add(&test_counter, 1, zm_memord_acq_rel);
+            if (elem != NULL) {
 #if defined(ZMTEST_ALLOC_QELEM)
-            free(elem);
+                if (*(int*)elem == 1)
+                    zm_atomic_fetch_add(&test_counter, 1, zm_memord_acq_rel);
+                else
+                    abort();
+                free(elem);
+#else
+                if ((size_t)elem == 1)
+                    zm_atomic_fetch_add(&test_counter, 1, zm_memord_acq_rel);
+                else
+                    abort();
 #endif
             }
         }
