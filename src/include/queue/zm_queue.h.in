@@ -18,7 +18,9 @@ extern int zm_queue_if;
 int zm_queue_parse_name(const char *name);
 
 /* default queue interface, given by configure */
+#if !defined(ZM_QUEUE_CONF)
 #define ZM_QUEUE_CONF @ZM_QUEUE_CONF@
+#endif
 
 /* ZM_QUEUE_IF: used in the library code to determine which queue implementation to use.
  * It is mapped to a constant if a user chooses a particular queue, or mapped to zm_queue_if
