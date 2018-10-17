@@ -298,13 +298,13 @@ AC_ARG_WITH([queue_if],
                           exposed by Izem (i.e., zm_queue_t and associated
                           routines. QUEUE_IF represents the name of the
                           underlying queue to be used. Possible values are:
-                          gl   - Global lock
-                          ms   - TBA
-                          swp  - TBA
-                          fa   - Fetch and add
+                          gl   - Global lock (both enq and deq compete for the same lock)
+                          ms   - Michael and Scott''s nonblocking queue (PODC''96)
+                          swp  - SWAP-based MPSC queue inspired by the MCS lock
+                          fa   - FAA-based MPSC queue derived from WF (Yang, PPoPP''16)
                           runtime - Runtime selection through ZM_QUEUE_IF environment variable
 ],,
-[with_queue_if=gl])
+[with_queue_if=swp])
 
 case "$with_queue_if" in
     gl)
