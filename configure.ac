@@ -339,8 +339,10 @@ AC_ARG_WITH([hwloc],
 AC_CHECK_LIB(hwloc,
              hwloc_topology_init,
              [],
-             AC_MSG_FAILURE([Could not find hwloc. Set the path to hwloc using --with-hwloc]),
+             AC_MSG_WARN([Could not find hwloc. Set the path to hwloc using --with-hwloc]),
              [])
+
+AM_CONDITIONAL([ZM_HAVE_HWLOC],[test "${with_hwloc+set}" = set])
 
 AM_INIT_AUTOMAKE([-Wall -Wno-portability-recursive -Werror foreign 1.11.3 subdir-objects])
 
@@ -375,18 +377,21 @@ AC_CONFIG_FILES([Makefile
                  maint/izem.pc
                  src/Makefile
                  src/include/common/zm_common.h
-                 src/include/lock/zm_lock.h
-                 src/include/lock/zm_lock_types.h
-                 src/include/cond/zm_cond.h
                  src/include/queue/zm_queue.h
                  test/Makefile
                  test/regres/Makefile
-                 test/regres/lock/Makefile
-                 test/regres/cond/Makefile
                  test/regres/list/Makefile
                  test/regres/queue/Makefile
                  test/perf/Makefile
-                 test/perf/lock/Makefile
                  test/perf/queue/Makefile
                  ])
+if test "${with_hwloc+set}" = set; then
+AC_CONFIG_FILES([src/include/lock/zm_lock.h
+                 src/include/lock/zm_lock_types.h
+                 src/include/cond/zm_cond.h
+                 test/regres/lock/Makefile
+                 test/regres/cond/Makefile
+                 test/perf/lock/Makefile
+                 ])
+fi
 AC_OUTPUT

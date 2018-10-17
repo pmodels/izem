@@ -7,6 +7,16 @@ prefixdir = ${prefix}
 
 zm_headers = \
 	include/common/zm_common.h \
+	include/queue/zm_queue_types.h \
+	include/queue/zm_glqueue.h \
+	include/queue/zm_swpqueue.h \
+	include/queue/zm_faqueue.h \
+	include/queue/zm_mpbqueue.h \
+	include/queue/zm_msqueue.h
+
+
+if ZM_HAVE_HWLOC
+zm_headers += \
 	include/lock/zm_lock.h \
 	include/lock/zm_lock_types.h \
 	include/lock/zm_ticket.h \
@@ -20,13 +30,8 @@ zm_headers = \
 	include/cond/zm_cond_types.h \
 	include/cond/zm_ccond.h \
 	include/cond/zm_scount.h \
-	include/cond/zm_wskip.h \
-	include/queue/zm_queue_types.h \
-	include/queue/zm_glqueue.h \
-	include/queue/zm_swpqueue.h \
-	include/queue/zm_faqueue.h \
-	include/queue/zm_mpbqueue.h \
-	include/queue/zm_msqueue.h
+	include/cond/zm_wskip.h
+endif
 
 noinst_HEADERS = \
 	include/zm_config.h \
