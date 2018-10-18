@@ -17,7 +17,7 @@ int zm_mmcs_acquire(zm_mmcs_t *L, zm_mcs_qnode_t* I) {
     if((zm_ptr_t)I == ZM_NULL)
         I = L->cur_ctx;
     zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
-    zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
+    zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange_ptr(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
     if((zm_ptr_t)pred != ZM_NULL) {
         zm_atomic_store(&I->status, ZM_LOCKED, zm_memord_release);
         zm_atomic_store(&pred->next, (zm_ptr_t)I, zm_memord_release);

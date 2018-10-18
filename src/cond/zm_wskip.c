@@ -73,7 +73,7 @@ static void* new_wskip() {
 static inline int enq(struct zm_mcs *L, zm_mcs_qnode_t* I, int *wait) {
     *wait = 1;
     zm_mcs_qnode_t* pred;
-    int status = zm_atomic_exchange(&I->status, ZM_WAIT, zm_memord_acq_rel);
+    int status = zm_atomic_exchange_int(&I->status, ZM_WAIT, zm_memord_acq_rel);
     /* wake() passed this node and is in the processs of setting it to RECYCLE */
     if(status == ZM_CHECK) {
         while (status != ZM_RECYCLE)
@@ -83,7 +83,7 @@ static inline int enq(struct zm_mcs *L, zm_mcs_qnode_t* I, int *wait) {
 
     if (status == ZM_RECYCLE) {
         zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
-        pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
+        pred = (zm_mcs_qnode_t*)zm_atomic_exchange_ptr(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
         if((zm_ptr_t)pred == ZM_NULL) {
             zm_atomic_store(&I->status, ZM_WAKE, zm_memord_release);
             *wait = 0;

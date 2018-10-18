@@ -162,12 +162,26 @@ if test "x$have_c11_atomics" = "xyes"; then
 fi
 AC_MSG_RESULT([$have_c11_atomics])
 
+AC_MSG_CHECKING([for gcc __sync atomics])
+have_sync_atomics=no
+AC_TRY_LINK(
+  [], [char l = 'm'; unsigned long v; __sync_bool_compare_and_swap(&l, 'm', 'l'); __sync_synchronize ();  __sync_fetch_and_add(&v, 1);],
+  [have_sync_atomics=yes],
+)
+if test "x$have_sync_atomics" = "xyes"; then
+  AC_DEFINE([HAVE_SYNC_ATOMICS], [1], [Define if the sync atomics are available])
+fi
+AC_MSG_RESULT([$have_sync_atomics])
+
+
 if test "x$have_c11_atomics" = "xyes"; then
   memory_model="C11"
+elif test "x$have_gcc_atomic_mem_aware_builtins" = "xyes"; then
+    memory_model="GCC_ATOM"
+elif test "x$have_sync_atomics" = "xyes"; then
+     memory_model="GCC_SYNC"
 else
-    if test "x$have_gcc_atomic_mem_aware_builtins" = "xyes"; then
-        memory_model="GCC_ATOM"
-    fi
+    AC_MSG_ERROR([No atomic/memory model found with this compiler])
 fi
 
 ZM_MEMORY_MODEL=ZM_MEMORY_MODEL_$memory_model

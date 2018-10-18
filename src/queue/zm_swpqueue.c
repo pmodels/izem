@@ -19,7 +19,7 @@ int zm_swpqueue_enqueue(zm_swpqueue_t* q, void *data) {
     zm_swpqnode_t* node = (zm_swpqnode_t*) malloc(sizeof(zm_swpqnode_t));
     node->data = data;
     zm_atomic_store(&node->next, ZM_NULL, zm_memord_release);
-    pred = (zm_swpqnode_t*)zm_atomic_exchange(&q->tail, (zm_ptr_t)node, zm_memord_acq_rel);
+    pred = (zm_swpqnode_t*)zm_atomic_exchange_ptr(&q->tail, (zm_ptr_t)node, zm_memord_acq_rel);
     zm_atomic_store(&pred->next, (zm_ptr_t)node, zm_memord_release);
     return 0;
 }

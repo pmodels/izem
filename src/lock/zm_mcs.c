@@ -62,7 +62,7 @@ static void* new_lock() {
 /* Main routines */
 static inline int acquire_c(struct zm_mcs *L, zm_mcs_qnode_t* I) {
     zm_atomic_store(&I->next, ZM_NULL, zm_memord_release);
-    zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
+    zm_mcs_qnode_t* pred = (zm_mcs_qnode_t*)zm_atomic_exchange_ptr(&L->lock, (zm_ptr_t)I, zm_memord_acq_rel);
     if((zm_ptr_t)pred != ZM_NULL) {
         zm_atomic_store(&I->status, ZM_LOCKED, zm_memord_release);
         zm_atomic_store(&pred->next, (zm_ptr_t)I, zm_memord_release);

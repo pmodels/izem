@@ -54,7 +54,7 @@
 
 #define LOAD(addr)                  zm_atomic_load(addr, zm_memord_acquire)
 #define STORE(addr, val)            zm_atomic_store(addr, val, zm_memord_release)
-#define SWAP(addr, desire)          zm_atomic_exchange(addr, desire, zm_memord_acq_rel)
+#define SWAP(addr, desire)          zm_atomic_exchange_ptr(addr, desire, zm_memord_acq_rel)
 #define CAS(addr, expect, desire)   zm_atomic_compare_exchange_strong(addr,\
                                                                       expect,\
                                                                       desire,\
