@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <omp.h>
-#include "zmtest_absqueue.h"
+#include "queue/zm_queue.h"
 #define TEST_NELEMTS  1000
 
 /*-------------------------------------------------------------------------
@@ -20,7 +20,7 @@
  */
 static inline void run() {
     int max_threads = omp_get_max_threads();
-    zm_absqueue_t* queues = malloc (max_threads/2 * sizeof(zm_absqueue_t));
+    zm_queue_t* queues = malloc (max_threads/2 * sizeof(zm_queue_t));
     double t1, t2;
 
     printf("#threads \t throughput ops/s\n");
@@ -29,7 +29,7 @@ static inline void run() {
     for (nthreads = 2; nthreads <= max_threads; nthreads += 2) {
         int i;
         for(i=0; i< nthreads/2; i++)
-            zm_absqueue_init(&queues[i]);
+            zm_queue_init(&queues[i]);
         int nelem_enq, nelem_deq;
 
         nelem_enq = TEST_NELEMTS/(nthreads/2);
@@ -57,15 +57,15 @@ static inline void run() {
         #if defined(ZMTEST_ALLOC_QELEM)
                     input = malloc(sizeof *input);
                     *input = 1;
-                    zm_absqueue_enqueue(&queues[qidx], (void*) input);
+                    zm_queue_enqueue(&queues[qidx], (void*) input);
         #else
-                    zm_absqueue_enqueue(&queues[qidx], (void*) &input);
+                    zm_queue_enqueue(&queues[qidx], (void*) &input);
         #endif
                 }
             } else {           /* consumer */
                 while(deq_count < nelem_deq) {
                     int* elem = NULL;
-                    zm_absqueue_dequeue(&queues[qidx], (void**)&elem);
+                    zm_queue_dequeue(&queues[qidx], (void**)&elem);
                     if ((elem != NULL) && (*elem == 1)) {
                         deq_count++;
         #if defined(ZMTEST_ALLOC_QELEM)

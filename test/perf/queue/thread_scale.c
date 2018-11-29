@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <omp.h>
-#include "zmtest_absqueue.h"
+#include "queue/zm_queue.h"
 #define TEST_NELEMTS 64
 #define NITER (1024*32)
 
@@ -21,14 +21,14 @@
  */
 static inline void run() {
     unsigned test_counter = 0;
-    zm_absqueue_t queue;
+    zm_queue_t queue;
     double t1, t2;
 
     printf("#threads \t throughput ops/s\n");
 
     int nthreads;
     for (nthreads = 2; nthreads <= omp_get_max_threads(); nthreads ++) {
-        zm_absqueue_init(&queue);
+        zm_queue_init(&queue);
         int nelem_enq, nelem_deq;
 
         #if   defined(ZMTEST_MPMC)
@@ -69,15 +69,15 @@ static inline void run() {
             #if defined(ZMTEST_ALLOC_QELEM)
                         input = malloc(sizeof *input);
                         *input = 1;
-                        zm_absqueue_enqueue(&queue, (void*) input);
+                        zm_queue_enqueue(&queue, (void*) input);
             #else
-                        zm_absqueue_enqueue(&queue, (void*) &input);
+                        zm_queue_enqueue(&queue, (void*) &input);
             #endif
                     }
                 } else {           /* consumer */
                     while(test_counter < nelem_deq) {
                         int* elem = NULL;
-                        zm_absqueue_dequeue(&queue, (void**)&elem);
+                        zm_queue_dequeue(&queue, (void**)&elem);
                         if ((elem != NULL) && (*elem == 1)) {
                             #pragma omp atomic
                                 test_counter++;

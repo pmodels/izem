@@ -40,18 +40,18 @@ thread_scale_spmc_gl_SOURCES = thread_scale.c
 thread_scale_spmc_ms_SOURCES = thread_scale.c
 thscale_mpb_SOURCES 		 = thscale_mpb.c
 
-enq_deq_pairs_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_ALLOC_QELEM -fopenmp
-enq_deq_pairs_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_ALLOC_QELEM -fopenmp
-enq_deq_pairs_swp_CFLAGS = -DZMTEST_USE_SWPQUEUE -DZMTEST_ALLOC_QELEM -fopenmp
-enq_deq_pairs_fa_CFLAGS = -DZMTEST_USE_FAQUEUE -DZMTEST_ALLOC_QELEM -fopenmp
-thread_scale_mpmc_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_MPMC -DZMTEST_ALLOC_QELEM -fopenmp
-thread_scale_mpmc_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_MPMC -DZMTEST_ALLOC_QELEM -fopenmp
-thread_scale_mpsc_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
-thread_scale_mpsc_swp_CFLAGS = -DZMTEST_USE_SWPQUEUE -DZMTEST_MPSC -fopenmp
-thread_scale_mpsc_fa_CFLAGS = -DZMTEST_USE_FAQUEUE -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
-thread_scale_mpsc_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
-thread_scale_spmc_gl_CFLAGS = -DZMTEST_USE_GLQUEUE -DZMTEST_SPMC -DZMTEST_ALLOC_QELEM -fopenmp
-thread_scale_spmc_ms_CFLAGS = -DZMTEST_USE_MSQUEUE -DZMTEST_SPMC -DZMTEST_ALLOC_QELEM -fopenmp
+enq_deq_pairs_gl_CFLAGS = -DZM_QUEUE_CONF=ZM_GLQUEUE_IF -DZMTEST_ALLOC_QELEM -fopenmp
+enq_deq_pairs_ms_CFLAGS = -DZM_QUEUE_CONF=ZM_MSQUEUE_IF -DZMTEST_ALLOC_QELEM -fopenmp
+enq_deq_pairs_swp_CFLAGS = -DZM_QUEUE_CONF=ZM_SWPQUEUE_IF -DZMTEST_ALLOC_QELEM -fopenmp
+enq_deq_pairs_fa_CFLAGS = -DZM_QUEUE_CONF=ZM_FAQUEUE_IF -DZMTEST_ALLOC_QELEM -fopenmp
+thread_scale_mpmc_gl_CFLAGS = -DZM_QUEUE_CONF=ZM_GLQUEUE_IF -DZMTEST_MPMC -DZMTEST_ALLOC_QELEM -fopenmp
+thread_scale_mpmc_ms_CFLAGS = -DZM_QUEUE_CONF=ZM_MSQUEUE_IF -DZMTEST_MPMC -DZMTEST_ALLOC_QELEM -fopenmp
+thread_scale_mpsc_gl_CFLAGS = -DZM_QUEUE_CONF=ZM_GLQUEUE_IF -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
+thread_scale_mpsc_swp_CFLAGS = -DZM_QUEUE_CONF=ZM_SWPQUEUE_IF -DZMTEST_MPSC -fopenmp
+thread_scale_mpsc_fa_CFLAGS = -DZM_QUEUE_CONF=ZM_FAQUEUE_IF -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
+thread_scale_mpsc_ms_CFLAGS = -DZM_QUEUE_CONF=ZM_MSQUEUE_IF -DZMTEST_MPSC -DZMTEST_ALLOC_QELEM -fopenmp
+thread_scale_spmc_gl_CFLAGS = -DZM_QUEUE_CONF=ZM_GLQUEUE_IF -DZMTEST_SPMC -DZMTEST_ALLOC_QELEM -fopenmp
+thread_scale_spmc_ms_CFLAGS = -DZM_QUEUE_CONF=ZM_MSQUEUE_IF -DZMTEST_SPMC -DZMTEST_ALLOC_QELEM -fopenmp
 thscale_mpb_CFLAGS 		= -fopenmp
 
 enq_deq_pairs_gl_LDFLAGS = -fopenmp
