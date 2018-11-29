@@ -101,7 +101,14 @@ static void run() {
     for (th=0; th < TEST_NTHREADS; th++) {
         data[th].tid = th;
         data[th].queue = &queue;
-        pthread_create(&threads[th], NULL, func, (void*) &data[th]);
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(th, &cpuset);
+        pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &cpuset);
+        pthread_create(&threads[th], &attr, func, (void*) &data[th]);
+        pthread_attr_destroy(&attr);
     }
     for (th=0; th < TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
