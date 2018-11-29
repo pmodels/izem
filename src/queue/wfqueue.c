@@ -24,6 +24,8 @@ SOFTWARE. */
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <hwloc.h>
+#include "queue/zm_wfqueue.h"
 
 /* From align.h */
 #define PAGE_SIZE 4096
@@ -74,6 +76,9 @@ struct _node_t {
   struct _cell_t cells[WFQUEUE_NODE_SIZE] CACHE_ALIGNED;
 };
 
+
+typedef struct _handle_t handle_t;
+
 typedef struct DOUBLE_CACHE_ALIGNED {
   /**
    * Index of the next position for enqueue.
@@ -99,6 +104,9 @@ typedef struct DOUBLE_CACHE_ALIGNED {
    * Number of processors.
    */
   long nprocs;
+
+  hwloc_topology_t topo;
+  handle_t *handles;
 #ifdef RECORD
   long slowenq;
   long slowdeq;
@@ -108,7 +116,7 @@ typedef struct DOUBLE_CACHE_ALIGNED {
 #endif
 } queue_t;
 
-typedef struct _handle_t {
+struct _handle_t {
   /**
    * Pointer to the next handle.
    */
@@ -171,7 +179,7 @@ typedef struct _handle_t {
   long fastdeq;
   long empty;
 #endif
-} handle_t;
+};
 
 /* From: primitives.h */
 
@@ -684,7 +692,7 @@ void *dequeue(queue_t *q, handle_t *th) {
     return v;
 }
 
-static pthread_barrier_t barrier;
+void queue_register(queue_t*, handle_t*);
 
 void queue_init(queue_t *q, int nprocs) {
     q->Hi = 0;
@@ -694,6 +702,9 @@ void queue_init(queue_t *q, int nprocs) {
     q->Di = 1;
 
     q->nprocs = nprocs;
+    q->handles = (handle_t*) malloc(nprocs * sizeof(handle_t));
+    for (int i = 0; i < nprocs; i++)
+        queue_register(q, &q->handles[i]);
 
 #ifdef RECORD
     q->fastenq = 0;
@@ -702,7 +713,6 @@ void queue_init(queue_t *q, int nprocs) {
     q->slowdeq = 0;
     q->empty = 0;
 #endif
-    pthread_barrier_init(&barrier, NULL, nprocs);
 }
 
 void queue_free(queue_t *q, handle_t *h) {
@@ -715,8 +725,6 @@ void queue_free(queue_t *q, handle_t *h) {
     FAA(&q->slowdeq, h->slowdeq);
     FAA(&q->empty, h->empty);
 
-    pthread_barrier_wait(&barrier);
-
     if (FAA(&lock, 1) == 0)
         printf("Enq: %f Deq: %f Empty: %f\n",
                q->slowenq * 100.0 / (q->fastenq + q->slowenq),
@@ -725,7 +733,7 @@ void queue_free(queue_t *q, handle_t *h) {
 #endif
 }
 
-void queue_register(queue_t *q, handle_t *th, int id) {
+void queue_register(queue_t *q, handle_t *th) {
     th->next = NULL;
     th->hzd_node_id = -1;
     th->Ep = q->Hp;
@@ -767,4 +775,68 @@ void queue_register(queue_t *q, handle_t *th, int id) {
 
     th->Eh = th->next;
     th->Dh = th->next;
+}
+
+/****************************************
+ *              izem wrappers
+ ****************************************/
+
+zm_thread_local int tid = -1;
+
+/* Check the actual affinity mask assigned to the thread */
+static inline void check_affinity(hwloc_topology_t topo) {
+    hwloc_cpuset_t cpuset = hwloc_bitmap_alloc();
+    int set_length;
+    hwloc_get_cpubind(topo, cpuset, HWLOC_CPUBIND_THREAD);
+    set_length = hwloc_get_nbobjs_inside_cpuset_by_type(topo, cpuset, HWLOC_OBJ_PU);
+    hwloc_bitmap_free(cpuset);
+
+    if(set_length != 1) {
+        printf("IZEM:WFQUEUE:ERROR: thread bound to more than one HW thread!\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+static inline int get_hwthread_id(hwloc_topology_t topo){
+    hwloc_cpuset_t cpuset = hwloc_bitmap_alloc();
+    hwloc_obj_t obj;
+    hwloc_get_cpubind(topo, cpuset, HWLOC_CPUBIND_THREAD);
+    obj = hwloc_get_obj_inside_cpuset_by_type(topo, cpuset, HWLOC_OBJ_PU, 0);
+    hwloc_bitmap_free(cpuset);
+    return obj->logical_index;
+}
+
+int zm_wfqueue_init(zm_wfqueue_t *Q) {
+    queue_t *q;
+    int nprocs;
+
+    posix_memalign((void **) &q, 2 * CACHE_LINE_SIZE, sizeof(queue_t));
+
+    hwloc_topology_init(&q->topo);
+    hwloc_topology_load(q->topo);
+    nprocs = hwloc_get_nbobjs_by_type(q->topo, HWLOC_OBJ_PU);
+    queue_init(q, nprocs);
+
+    *Q = (zm_wfqueue_t) q;
+    return 0;
+}
+
+int zm_wfqueue_enqueue(zm_wfqueue_t *Q, void *data) {
+    queue_t *q = (queue_t*)(void*)(*Q);
+    if (zm_unlikely(tid == -1)) {
+        check_affinity(q->topo);
+        tid = get_hwthread_id(q->topo);
+    }
+    enqueue(q, &q->handles[tid], data);
+    return 0;
+}
+
+int zm_wfqueue_dequeue(zm_wfqueue_t *Q, void **data) {
+    queue_t *q = (queue_t*)(void*)(*Q);
+    if (zm_unlikely(tid == -1)) {
+        check_affinity(q->topo);
+        tid = get_hwthread_id(q->topo);
+    }
+    *data = dequeue(q, &q->handles[tid]);
+    return 0;
 }

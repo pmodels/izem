@@ -82,6 +82,9 @@ struct zm_mpbqueue {
     int last_bucket_set;
 };
 
+
+typedef zm_ptr_t zm_wfqueue_t;
+
 /* Common structure to allow runtime selection */
 
 typedef union zm_queue {
