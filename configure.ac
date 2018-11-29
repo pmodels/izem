@@ -315,6 +315,7 @@ AC_ARG_WITH([queue_if],
                           gl   - Global lock (both enq and deq compete for the same lock)
                           ms   - Michael and Scott''s nonblocking queue (PODC''96)
                           swp  - SWAP-based MPSC queue inspired by the MCS lock
+                          wf   - FAA-based MPMC wait-free queue (Yang, PPoPP''16
                           fa   - FAA-based MPSC queue derived from WF (Yang, PPoPP''16)
                           runtime - Runtime selection through ZM_QUEUE_IF environment variable
 ],,
@@ -329,6 +330,9 @@ case "$with_queue_if" in
     ;;
     swp)
         ZM_QUEUE_CONF=ZM_SWPQUEUE_IF
+    ;;
+    wf)
+        ZM_QUEUE_CONF=ZM_WFQUEUE_IF
     ;;
     fa)
         ZM_QUEUE_CONF=ZM_FAQUEUE_IF
