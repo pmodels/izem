@@ -30,7 +30,8 @@ zm_headers += \
 	include/cond/zm_cond_types.h \
 	include/cond/zm_ccond.h \
 	include/cond/zm_scount.h \
-	include/cond/zm_wskip.h
+	include/cond/zm_wskip.h \
+	include/other/zm_dsmsync.h
 endif
 
 noinst_HEADERS = \
