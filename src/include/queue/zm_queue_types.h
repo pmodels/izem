@@ -6,6 +6,7 @@
 #ifndef _ZM_QUEUE_TYPES_H
 #define _ZM_QUEUE_TYPES_H
 #include "common/zm_common.h"
+#include "other/zm_dsmsync.h"
 #include <pthread.h>
 #include <limits.h>
 
@@ -82,8 +83,17 @@ struct zm_mpbqueue {
     int last_bucket_set;
 };
 
-
 typedef zm_ptr_t zm_wfqueue_t;
+
+typedef struct zm_dsmqueue zm_dsmqueue_t;
+typedef struct zm_glqnode zm_listnode_t;
+
+struct zm_dsmqueue {
+    zm_dsm_t enq;
+    zm_dsm_t deq;
+    zm_ptr_t head ZM_ALLIGN_TO_CACHELINE;
+    zm_ptr_t tail ZM_ALLIGN_TO_CACHELINE;
+};
 
 /* Common structure to allow runtime selection */
 
