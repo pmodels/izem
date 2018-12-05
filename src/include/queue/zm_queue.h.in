@@ -13,6 +13,7 @@
 #define ZM_FAQUEUE_IF      4
 #define ZM_MPBQUEUE_IF     5
 #define ZM_WFQUEUE_IF      6
+#define ZM_DSMQUEUE_IF     7
 
 extern int zm_queue_if;
 
@@ -40,6 +41,7 @@ int zm_queue_parse_name(const char *name);
 
 #include <queue/zm_glqueue.h>
 #include <queue/zm_msqueue.h>
+#include <queue/zm_dsmqueue.h>
 #include <queue/zm_swpqueue.h>
 #include <queue/zm_wfqueue.h>
 #include <queue/zm_faqueue.h>
@@ -62,6 +64,9 @@ static inline int zm_queue_init(zm_queue_t *q)
 
         case ZM_MSQUEUE_IF:
             return zm_msqueue_init(&q->msqueue);
+
+        case ZM_DSMQUEUE_IF:
+            return zm_dsmqueue_init(&q->dsmqueue);
 
         case ZM_SWPQUEUE_IF:
             return zm_swpqueue_init(&q->swpqueue);
@@ -88,6 +93,9 @@ static inline int zm_queue_enqueue(zm_queue_t* q, void *data)
         case ZM_MSQUEUE_IF:
             return zm_msqueue_enqueue(&q->msqueue, data);
 
+        case ZM_DSMQUEUE_IF:
+            return zm_dsmqueue_enqueue(&q->dsmqueue, data);
+
         case ZM_SWPQUEUE_IF:
             return zm_swpqueue_enqueue(&q->swpqueue, data);
 
@@ -111,6 +119,9 @@ static inline int zm_queue_dequeue(zm_queue_t* q, void **data)
 
         case ZM_MSQUEUE_IF:
             return zm_msqueue_dequeue(&q->msqueue, data);
+
+        case ZM_DSMQUEUE_IF:
+            return zm_dsmqueue_dequeue(&q->dsmqueue, data);
 
         case ZM_SWPQUEUE_IF:
             return zm_swpqueue_dequeue(&q->swpqueue, data);

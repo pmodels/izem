@@ -100,6 +100,7 @@ struct zm_dsmqueue {
 typedef union zm_queue {
     zm_glqueue_t  glqueue;
     zm_msqueue_t  msqueue;
+    zm_dsmqueue_t dsmqueue;
     zm_swpqueue_t swpqueue;
     zm_wfqueue_t  wfqueue;
     zm_faqueue_t  faqueue;
