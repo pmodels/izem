@@ -46,21 +46,6 @@
 #error "TRUE already defined"
 #endif
 
-/* Atomic operation shorthands. The memory ordering defaults to:
- * 1- Acquire ordering for loads
- * 2- Release ordering for stores
- * 3- Acquire+Release ordering for read-modify-write operations
- * */
-
-#define LOAD(addr)                  zm_atomic_load(addr, zm_memord_acquire)
-#define STORE(addr, val)            zm_atomic_store(addr, val, zm_memord_release)
-#define SWAP(addr, desire)          zm_atomic_exchange_ptr(addr, desire, zm_memord_acq_rel)
-#define CAS(addr, expect, desire)   zm_atomic_compare_exchange_strong(addr,\
-                                                                      expect,\
-                                                                      desire,\
-                                                                      zm_memord_acq_rel,\
-                                                                      zm_memord_acquire)
-
 struct hnode{
     unsigned threshold __attribute__((aligned(ZM_CACHELINE_SIZE)));
     struct hnode * parent __attribute__((aligned(ZM_CACHELINE_SIZE)));
