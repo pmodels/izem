@@ -59,6 +59,7 @@ RetVal DSM-Synch(Request req){   // pseudocode for thread pi
 
  */
 #include <stdlib.h>
+#include "lock/zm_lock.h"
 #include "other/zm_dsmsync.h"
 #include "hwloc.h"
 
@@ -83,6 +84,7 @@ struct dsm_tnode {
 };
 
 struct dsm {
+    zm_lock_t lock;
     zm_atomic_ptr_t tail;
     struct dsm_tnode *local_nodes;
     hwloc_topology_t topo;
@@ -132,6 +134,7 @@ static void* new_dsm() {
 
     STORE(&D->tail, (zm_ptr_t)ZM_NULL);
     D->local_nodes = tnodes;
+    zm_lock_init(&D->lock);
 
     return D;
 }
@@ -183,10 +186,17 @@ static inline int combine (struct dsm *D, struct dsm_tnode *tnode) {
     head = local;
     int counter = 0;
     while (1) {
-        head->apply(head->req);
-        STORE(&head->status, ZM_COMPLETE);
+        if (zm_unlikely(head->req == NULL)) {
+            /* this can only mean that I am a combiner thread that
+             * called "dsm_acquire" -> first loop iteration */
+            assert(counter == 0);
+        } else {
+            head->apply(head->req);
+            STORE(&head->status, ZM_COMPLETE);
+        }
         if (LOAD(&head->next) == ZM_NULL ||
             LOAD(&((struct dsm_qnode*)LOAD(&head->next))->next) == ZM_NULL ||
+            LOAD(&((struct dsm_qnode*)LOAD(&head->next))->req) == NULL ||
             counter > ZM_DSM_MAX_COMBINE)
             break;
         head = (struct dsm_qnode*) LOAD(&head->next);
@@ -241,6 +251,26 @@ static inline int dsm_sync (struct dsm *D, struct dsm_tnode *tnode,
     return 0;
 }
 
+static inline int dsm_acquire (struct dsm *D, struct dsm_tnode *tnode) {
+    /* (1) acquire "lock" in a traditionally mutual exclusion way */
+    zm_lock_acquire(&D->lock);
+    /* (2) acquire the combining queue lock */
+    acq_enq(D, tnode, NULL, NULL);
+    /* (3) traverse the queue and comine requests if any */
+    combine(D, tnode);
+
+    return 0;
+}
+
+static inline int dsm_release (struct dsm *D, struct dsm_tnode *tnode) {
+    /* (1) release the combining queue lock */
+    release(D, tnode);
+    /* (2) release the mutual exclusion lock */
+    zm_lock_release(&D->lock);
+
+    return 0;
+}
+
 int zm_dsm_init(zm_dsm_t *handle) {
     void *p = new_dsm();
     *handle  = (zm_dsm_t) p;
@@ -254,5 +284,25 @@ int zm_dsm_sync(zm_dsm_t D, void (*apply)(void *), void *req) {
         tid = get_hwthread_id(d->topo);
     }
     dsm_sync(d, &d->local_nodes[tid], apply, req);
+    return 0;
+}
+
+int zm_dsm_acquire(zm_dsm_t D) {
+    struct dsm *d = (struct dsm*)(void *)D;
+    if (zm_unlikely(tid == -1)) {
+        check_affinity(d->topo);
+        tid = get_hwthread_id(d->topo);
+    }
+    dsm_acquire(d, &d->local_nodes[tid]);
+    return 0;
+}
+
+int zm_dsm_release(zm_dsm_t D) {
+    struct dsm *d = (struct dsm*)(void *)D;
+    if (zm_unlikely(tid == -1)) {
+        check_affinity(d->topo);
+        tid = get_hwthread_id(d->topo);
+    }
+    dsm_release(d, &d->local_nodes[tid]);
     return 0;
 }
