@@ -77,6 +77,8 @@ struct dsm_qnode {
 struct dsm_tnode {
     struct dsm_qnode qnodes[2] __attribute__((aligned(ZM_CACHELINE_SIZE)));
     int toggle;
+    /* to store head between combine and release operations */
+    struct dsm_qnode *head __attribute__((aligned(ZM_CACHELINE_SIZE)));
 };
 
 struct dsm {
@@ -133,9 +135,8 @@ static void* new_dsm() {
     return D;
 }
 
-static inline int dsm_sync (struct dsm *D, struct dsm_tnode *tnode,
-                            void (*apply)(void *), void *req) {
-    struct dsm_qnode *tmp, *local, *pred; /* "foo" = "qnode foo" */
+static inline int acq_enq(struct dsm *D, struct dsm_tnode *tnode, void *req) {
+    struct dsm_qnode *local, *pred; /* "foo" = "qnode foo" */
 
     /* prepare my local node */
     tnode->toggle = 1 - tnode->toggle;
@@ -161,6 +162,21 @@ static inline int dsm_sync (struct dsm *D, struct dsm_tnode *tnode,
             return 0;
     }
 
+    return 0;
+}
+
+static inline int combine (struct dsm *D, void (*apply)(void *),
+                           struct dsm_tnode *tnode) {
+    struct dsm_qnode *tmp, *local; /* "foo" = "qnode foo" */
+
+    local = &tnode->qnodes[tnode->toggle];
+    /* if my request got already completed, combining and releasing
+     * are unnecessary. Inlining should optimize this branch out. */
+    if (LOAD(&local->status) == ZM_COMPLETE) {
+        tnode->head = NULL;
+        return 0;
+    }
+
     /* I am the combiner and my request is still pending */
     tmp = local;
     int counter = 0;
@@ -174,6 +190,22 @@ static inline int dsm_sync (struct dsm *D, struct dsm_tnode *tnode,
         tmp = (struct dsm_qnode*) LOAD(&tmp->next);
         counter++;
     }
+
+    tnode->head = tmp;
+
+    return 0;
+}
+
+static inline int release (struct dsm *D, struct dsm_tnode *tnode) {
+    struct dsm_qnode *tmp = tnode->head;
+
+    /* tmp either points at the head of the queue or NULL if my request got
+     * completed. If NULL, no need to perform release. This branch should be
+     * compiled out when everything is inlined.
+     */
+
+    if (tmp == NULL)
+        return 0;
 
     /* release the lock */
     if (LOAD(&tmp->next) == ZM_NULL) {
@@ -191,6 +223,18 @@ static inline int dsm_sync (struct dsm *D, struct dsm_tnode *tnode,
      */
     STORE(&((struct dsm_qnode*)LOAD(&tmp->next))->status, ZM_UNLOCKED);
     STORE(&tmp->next, ZM_NULL);
+
+    return 0;
+}
+
+static inline int dsm_sync (struct dsm *D, struct dsm_tnode *tnode,
+                            void (*apply)(void *), void *req) {
+    /* (1) acquire the lock or enqueue my reqeust */
+    acq_enq(D, tnode, req);
+    /* (2) traverse the queue and comine requests if any */
+    combine(D, apply, tnode);
+    /* (3) release the lock if needed. */
+    release(D, tnode);
 
     return 0;
 }
