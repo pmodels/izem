@@ -69,6 +69,7 @@ RetVal DSM-Synch(Request req){   // pseudocode for thread pi
 
 struct dsm_qnode {
     void *req __attribute__((aligned(ZM_CACHELINE_SIZE)));
+    void (*apply)(void *);
     zm_atomic_uint_t status;
     zm_atomic_ptr_t next;
 };
@@ -135,7 +136,8 @@ static void* new_dsm() {
     return D;
 }
 
-static inline int acq_enq(struct dsm *D, struct dsm_tnode *tnode, void *req) {
+static inline int acq_enq(struct dsm *D, struct dsm_tnode *tnode,
+                          void (*apply)(void *), void *req) {
     struct dsm_qnode *local, *pred; /* "foo" = "qnode foo" */
 
     /* prepare my local node */
@@ -144,6 +146,7 @@ static inline int acq_enq(struct dsm *D, struct dsm_tnode *tnode, void *req) {
     STORE(&local->status, ZM_WAIT);
     STORE(&local->next, ZM_NULL);
     local->req = req;
+    local->apply = apply;
 
     /* swap with globally-visible lock (queue tail)
      * this effectively announces my request "req"
@@ -165,8 +168,7 @@ static inline int acq_enq(struct dsm *D, struct dsm_tnode *tnode, void *req) {
     return 0;
 }
 
-static inline int combine (struct dsm *D, void (*apply)(void *),
-                           struct dsm_tnode *tnode) {
+static inline int combine (struct dsm *D, struct dsm_tnode *tnode) {
     struct dsm_qnode *head, *local; /* "foo" = "qnode foo" */
 
     local = &tnode->qnodes[tnode->toggle];
@@ -181,7 +183,7 @@ static inline int combine (struct dsm *D, void (*apply)(void *),
     head = local;
     int counter = 0;
     while (1) {
-        apply(head->req);
+        head->apply(head->req);
         STORE(&head->status, ZM_COMPLETE);
         if (LOAD(&head->next) == ZM_NULL ||
             LOAD(&((struct dsm_qnode*)LOAD(&head->next))->next) == ZM_NULL ||
@@ -230,9 +232,9 @@ static inline int release (struct dsm *D, struct dsm_tnode *tnode) {
 static inline int dsm_sync (struct dsm *D, struct dsm_tnode *tnode,
                             void (*apply)(void *), void *req) {
     /* (1) acquire the lock or enqueue my reqeust */
-    acq_enq(D, tnode, req);
+    acq_enq(D, tnode, apply, req);
     /* (2) traverse the queue and comine requests if any */
-    combine(D, apply, tnode);
+    combine(D, tnode);
     /* (3) release the lock if needed. */
     release(D, tnode);
 
