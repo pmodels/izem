@@ -167,7 +167,7 @@ static inline int acq_enq(struct dsm *D, struct dsm_tnode *tnode, void *req) {
 
 static inline int combine (struct dsm *D, void (*apply)(void *),
                            struct dsm_tnode *tnode) {
-    struct dsm_qnode *tmp, *local; /* "foo" = "qnode foo" */
+    struct dsm_qnode *head, *local; /* "foo" = "qnode foo" */
 
     local = &tnode->qnodes[tnode->toggle];
     /* if my request got already completed, combining and releasing
@@ -178,42 +178,42 @@ static inline int combine (struct dsm *D, void (*apply)(void *),
     }
 
     /* I am the combiner and my request is still pending */
-    tmp = local;
+    head = local;
     int counter = 0;
     while (1) {
-        apply(tmp->req);
-        STORE(&tmp->status, ZM_COMPLETE);
-        if (LOAD(&tmp->next) == ZM_NULL ||
-            LOAD(&((struct dsm_qnode*)LOAD(&tmp->next))->next) == ZM_NULL ||
+        apply(head->req);
+        STORE(&head->status, ZM_COMPLETE);
+        if (LOAD(&head->next) == ZM_NULL ||
+            LOAD(&((struct dsm_qnode*)LOAD(&head->next))->next) == ZM_NULL ||
             counter > ZM_DSM_MAX_COMBINE)
             break;
-        tmp = (struct dsm_qnode*) LOAD(&tmp->next);
+        head = (struct dsm_qnode*) LOAD(&head->next);
         counter++;
     }
 
-    tnode->head = tmp;
+    tnode->head = head;
 
     return 0;
 }
 
 static inline int release (struct dsm *D, struct dsm_tnode *tnode) {
-    struct dsm_qnode *tmp = tnode->head;
+    struct dsm_qnode *head = tnode->head;
 
-    /* tmp either points at the head of the queue or NULL if my request got
+    /* head either points at the head of the queue or NULL if my request got
      * completed. If NULL, no need to perform release. This branch should be
      * compiled out when everything is inlined.
      */
 
-    if (tmp == NULL)
+    if (head == NULL)
         return 0;
 
     /* release the lock */
-    if (LOAD(&tmp->next) == ZM_NULL) {
-        zm_ptr_t expected = (zm_ptr_t)tmp;
+    if (LOAD(&head->next) == ZM_NULL) {
+        zm_ptr_t expected = (zm_ptr_t)head;
         if(CAS(&D->tail, &expected, ZM_NULL))
             return 0;
         /* another thread showed up; wait for it to update next*/
-        while (LOAD(&tmp->next) == ZM_NULL)
+        while (LOAD(&head->next) == ZM_NULL)
             /* NOP */;
     }
 
@@ -221,8 +221,8 @@ static inline int release (struct dsm *D, struct dsm_tnode *tnode) {
      * or I detected a false-positive empty queue.
      * either way, elect the next thread as the combiner.
      */
-    STORE(&((struct dsm_qnode*)LOAD(&tmp->next))->status, ZM_UNLOCKED);
-    STORE(&tmp->next, ZM_NULL);
+    STORE(&((struct dsm_qnode*)LOAD(&head->next))->status, ZM_UNLOCKED);
+    STORE(&head->next, ZM_NULL);
 
     return 0;
 }
