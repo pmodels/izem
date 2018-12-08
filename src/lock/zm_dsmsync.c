@@ -60,7 +60,7 @@ RetVal DSM-Synch(Request req){   // pseudocode for thread pi
  */
 #include <stdlib.h>
 #include "lock/zm_lock.h"
-#include "other/zm_dsmsync.h"
+#include "lock/zm_dsmsync.h"
 #include "hwloc.h"
 
 #define ZM_DSM_MAX_COMBINE (1 << 10)

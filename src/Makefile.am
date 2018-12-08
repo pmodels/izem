@@ -8,7 +8,6 @@ include $(top_srcdir)/src/mem/Makefile.mk
 if ZM_HAVE_HWLOC
 include $(top_srcdir)/src/lock/Makefile.mk
 include $(top_srcdir)/src/cond/Makefile.mk
-include $(top_srcdir)/src/other/Makefile.mk
 endif
 include $(top_srcdir)/src/list/Makefile.mk
 include $(top_srcdir)/src/queue/Makefile.mk

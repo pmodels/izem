@@ -26,12 +26,12 @@ zm_headers += \
 	include/lock/zm_mcsp.h \
 	include/lock/zm_hmcs.h \
 	include/lock/zm_hmpr.h \
+	include/lock/zm_dsmsync.h \
 	include/cond/zm_cond.h \
 	include/cond/zm_cond_types.h \
 	include/cond/zm_ccond.h \
 	include/cond/zm_scount.h \
-	include/cond/zm_wskip.h \
-	include/other/zm_dsmsync.h
+	include/cond/zm_wskip.h
 endif
 
 noinst_HEADERS = \

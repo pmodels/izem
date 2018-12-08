@@ -6,7 +6,7 @@
 #ifndef _ZM_QUEUE_TYPES_H
 #define _ZM_QUEUE_TYPES_H
 #include "common/zm_common.h"
-#include "other/zm_dsmsync.h"
+#include "lock/zm_dsmsync.h"
 #include <pthread.h>
 #include <limits.h>
 
