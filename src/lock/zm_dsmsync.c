@@ -59,7 +59,7 @@ RetVal DSM-Synch(Request req){   // pseudocode for thread pi
 
  */
 #include <stdlib.h>
-#include "lock/zm_lock.h"
+#include "lock/zm_mcs.h"
 #include "lock/zm_dsmsync.h"
 #include "hwloc.h"
 
@@ -84,7 +84,7 @@ struct dsm_tnode {
 };
 
 struct dsm {
-    zm_lock_t lock;
+    zm_mcs_t lock;
     zm_atomic_ptr_t tail;
     struct dsm_tnode *local_nodes;
     hwloc_topology_t topo;
@@ -134,9 +134,18 @@ static void* new_dsm() {
 
     STORE(&D->tail, (zm_ptr_t)ZM_NULL);
     D->local_nodes = tnodes;
-    zm_lock_init(&D->lock);
+    zm_mcs_init(&D->lock);
 
     return D;
+}
+
+static inline int free_dsm(struct dsm *D)
+{
+    zm_mcs_destroy(&D->lock);
+    free(D->local_nodes);
+    hwloc_topology_destroy(D->topo);
+    free(D);
+    return 0;
 }
 
 static inline int acq_enq(struct dsm *D, struct dsm_tnode *tnode,
@@ -253,7 +262,7 @@ static inline int dsm_sync (struct dsm *D, struct dsm_tnode *tnode,
 
 static inline int dsm_acquire (struct dsm *D, struct dsm_tnode *tnode) {
     /* (1) acquire "lock" in a traditionally mutual exclusion way */
-    zm_lock_acquire(&D->lock);
+    zm_mcs_acquire(D->lock);
     /* (2) acquire the combining queue lock */
     acq_enq(D, tnode, NULL, NULL);
     /* (3) traverse the queue and comine requests if any */
@@ -266,7 +275,7 @@ static inline int dsm_release (struct dsm *D, struct dsm_tnode *tnode) {
     /* (1) release the combining queue lock */
     release(D, tnode);
     /* (2) release the mutual exclusion lock */
-    zm_lock_release(&D->lock);
+    zm_mcs_release(D->lock);
 
     return 0;
 }
@@ -274,6 +283,11 @@ static inline int dsm_release (struct dsm *D, struct dsm_tnode *tnode) {
 int zm_dsm_init(zm_dsm_t *handle) {
     void *p = new_dsm();
     *handle  = (zm_dsm_t) p;
+    return 0;
+}
+
+int zm_dsm_destroy(zm_dsm_t *handle) {
+    free_dsm((struct dsm*)(*handle));
     return 0;
 }
 

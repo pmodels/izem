@@ -204,6 +204,7 @@ AC_ARG_WITH([lock_if],
                           hmcs - Multilevel Hierarchical MCS (HMCS)
                           tlp  - Generic Two-Level Priority
                           mcsp - Two-Level MCS lock
+                          dsm  - DSM-Sync-enabled MCS lock
 ],,
 [with_lock_if=tkt])
 
@@ -225,6 +226,9 @@ case "$with_lock_if" in
     ;;
     mcsp)
         ZM_LOCK_IF=ZM_MCSP_IF
+    ;;
+    dsm)
+        ZM_LOCK_IF=ZM_DSM_IF
     ;;
     *)
         AC_MSG_WARN([Unknown value $with_lock_if for with-lock-if])
