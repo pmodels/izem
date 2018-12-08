@@ -83,6 +83,22 @@
 #define zm_abslock_tryacq_lc(global_lock, local_ctx, suc) zm_hmcs_tryacq(*(global_lock), suc)
 #define zm_abslock_release_c(global_lock, local_context)  zm_hmcs_release(*(global_lock))
 
+#elif defined(ZMTEST_USE_DSM)
+#include <lock/zm_dsmsync.h>
+/* types */
+#define zm_abslock_t                   zm_dsm_t
+#define zm_abslock_localctx_t          int /*dummy*/
+#define zm_abslock_init                zm_dsm_init
+#define zm_abslock_destroy             zm_dsm_destroy
+/* Context-less routines */
+#define zm_abslock_acquire(global_lock)          zm_dsm_acquire(*(global_lock))
+#define zm_abslock_acquire_l(global_lock)        zm_dsm_acquire(*(global_lock))
+#define zm_abslock_release(global_lock)          zm_dsm_release(*(global_lock))
+/* Context-full routines */
+#define zm_abslock_acquire_c(global_lock, local_context)  zm_dsm_acquire(*(global_lock))
+#define zm_abslock_acquire_lc(global_lock, local_context) zm_dsm_acquire(*(global_lock))
+#define zm_abslock_release_c(global_lock, local_context)  zm_dsm_release(*(global_lock))
+
 #else
 #error "No lock implementation specified"
 #endif
