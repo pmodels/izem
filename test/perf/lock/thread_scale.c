@@ -8,7 +8,7 @@
 #include <sched.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "zmtest_abslock.h"
+#include "lock/zm_lock.h"
 
 #define TEST_NITER (1<<22)
 #define WARMUP_ITER 128
@@ -24,7 +24,7 @@ int indices [] = {3,6,1,7,0,2,9,4,8,5};
 int indices [] = {2,1,3,0};
 #endif
 
-zm_abslock_t lock;
+zm_lock_t lock;
 
 #if defined (ZM_BIND_MANUAL)
 void bind_compact(){
@@ -48,7 +48,7 @@ static void test_thruput()
 {
     unsigned nthreads = omp_get_max_threads();
 
-    zm_abslock_init(&lock);
+    zm_lock_init(&lock);
     int cur_nthreads;
     /* Throughput = lock acquisitions per second */
     printf("nthreads,thruput,lat\n");
@@ -63,11 +63,11 @@ static void test_thruput()
 
             /* Warmup */
             for(int iter=0; iter < WARMUP_ITER; iter++) {
-                zm_abslock_acquire(&lock);
+                zm_lock_acquire(&lock);
                 /* Computation */
                 for(int i = 0; i < ARRAY_LEN; i++)
                      cache_lines[indices[i]] += cache_lines[indices[ARRAY_LEN-1-i]];
-                zm_abslock_release(&lock);
+                zm_lock_release(&lock);
             }
             #pragma omp barrier
             #pragma omp single
@@ -76,11 +76,11 @@ static void test_thruput()
             }
             #pragma omp for schedule(static)
             for(int iter = 0; iter < TEST_NITER; iter++) {
-                zm_abslock_acquire(&lock);
+                zm_lock_acquire(&lock);
                 /* Computation */
                 for(int i = 0; i < ARRAY_LEN; i++)
                      cache_lines[indices[i]] += cache_lines[indices[ARRAY_LEN-1-i]];
-                zm_abslock_release(&lock);
+                zm_lock_release(&lock);
             }
         }
         stop_time = omp_get_wtime();

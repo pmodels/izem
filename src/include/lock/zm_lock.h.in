@@ -16,7 +16,9 @@
 #define ZM_IMCS_IF      8
 
 /* default lock interface */
+#if !defined(ZM_LOCK_IF)
 #define ZM_LOCK_IF @ZM_LOCK_IF@
+#endif
 
 #if ZM_LOCK_IF == ZM_TICKET_IF
 

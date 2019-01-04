@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <getopt.h>
-#include "zmtest_abslock.h"
+#include "lock/zm_lock.h"
 
 #define TEST_NITER (1<<22)
 #define WARMUP_ITER 128
@@ -20,7 +20,7 @@
 char *cache_lines;
 unsigned array_len = 10;
 
-zm_abslock_t lock;
+zm_lock_t lock;
 
 #if defined (ZM_BIND_MANUAL)
 void bind_compact(){
@@ -45,7 +45,7 @@ static void test_thruput()
     memset(cache_lines, 0, CACHELINE_SZ * array_len);
     unsigned nthreads = omp_get_max_threads();
 
-    zm_abslock_init(&lock);
+    zm_lock_init(&lock);
     int cur_nthreads;
     /* Throughput = lock acquisitions per second */
     printf("nthreads,thruput,lat\n");
@@ -62,14 +62,14 @@ static void test_thruput()
 
             /* Warmup */
             for(int iter=0; iter < WARMUP_ITER; iter++) {
-                zm_abslock_acquire(&lock);
+                zm_lock_acquire(&lock);
                 /* Computation */
                 for(int i = 0; i < array_len; i++) {
                      unsigned read_index = rand_r(&private_seed) % array_len;
                      unsigned write_index = rand_r(&private_seed) % array_len;
                      cache_lines[write_index] += cache_lines[read_index] + 1;
                 }
-                zm_abslock_release(&lock);
+                zm_lock_release(&lock);
             }
             #pragma omp barrier
             #pragma omp single
@@ -78,14 +78,14 @@ static void test_thruput()
             }
             #pragma omp for schedule(static)
             for(int iter = 0; iter < TEST_NITER; iter++) {
-                zm_abslock_acquire(&lock);
+                zm_lock_acquire(&lock);
                 /* Computation */
                 for(int i = 0; i < array_len; i++) {
                      unsigned read_index = rand_r(&private_seed) % array_len;
                      unsigned write_index = rand_r(&private_seed) % array_len;
                      cache_lines[write_index] += cache_lines[read_index] + 1;
                 }
-                zm_abslock_release(&lock);
+                zm_lock_release(&lock);
             }
         }
         stop_time = omp_get_wtime();

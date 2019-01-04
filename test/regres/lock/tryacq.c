@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-#include <zmtest_abslock.h>
+#include <lock/zm_lock.h>
 
 #define TEST_NTHREADS 1
 #define TEST_NITER 1000
@@ -15,19 +15,19 @@ int indices [] = {3,6,1,7,0,2,9,4,8,5};
 
 static void* run(void *arg) {
      int count = 0;
-     zm_abslock_t *lock = (zm_abslock_t*) arg;
+     zm_lock_t *lock = (zm_lock_t*) arg;
      while (count < TEST) {
          int success = 0;
-         int err =  zm_abslock_tryacq(lock, &success);
+         int err =  zm_lock_tryacq(lock, &success);
          if(err==0) {  /* Lock successfully acquired */
             if (success) {
                 for(int i = 0; i < 10; i++)
                     cache_lines[indices[i]] += cache_lines[indices[9-i]];
                 count++;
-                zm_abslock_release(lock);   /* Release the lock */
+                zm_lock_release(lock);   /* Release the lock */
             }
          } else {
-            fprintf(stderr, "Error at zm_abslock_acquire\n");
+            fprintf(stderr, "Error at zm_lock_acquire\n");
             exit(1);
          }
      }
@@ -47,8 +47,8 @@ static void test_lock_thruput() {
     void *res;
     pthread_t threads[TEST_NTHREADS];
 
-    zm_abslock_t lock;
-    zm_abslock_init(&lock);
+    zm_lock_t lock;
+    zm_lock_init(&lock);
 
     int th;
     for (th=0; th<TEST_NTHREADS; th++) {
@@ -64,7 +64,7 @@ static void test_lock_thruput() {
     for (th=0; th<TEST_NTHREADS; th++)
         pthread_join(threads[th], &res);
 
-    zm_abslock_destroy(&lock);
+    zm_lock_destroy(&lock);
 
     printf("Pass\n");
 

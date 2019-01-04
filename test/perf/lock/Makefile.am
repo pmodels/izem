@@ -29,12 +29,12 @@ thread_ws_scale_hmcs_SOURCES = thread_ws_scale.c
 thread_scale_tlp_SOURCES = thread_scale_tlp.c
 thread_scale_mcsp_SOURCES = thread_scale_tlp.c
 
-thread_scale_tkt_CFLAGS = -DZMTEST_USE_TICKET -fopenmp
-thread_scale_mcs_CFLAGS = -DZMTEST_USE_MCS -fopenmp
-thread_scale_hmcs_CFLAGS = -DZMTEST_USE_HMCS -fopenmp
-thread_scale_dsm_CFLAGS = -DZMTEST_USE_DSM -fopenmp
-thread_ws_scale_tkt_CFLAGS = -DZMTEST_USE_TICKET -fopenmp
-thread_ws_scale_mcs_CFLAGS = -DZMTEST_USE_MCS -fopenmp
+thread_scale_tkt_CFLAGS = -DZM_LOCK_IF=ZM_TICKET_IF -fopenmp
+thread_scale_mcs_CFLAGS = -DZM_LOCK_IF=ZM_MCS_IF -fopenmp
+thread_scale_hmcs_CFLAGS = -DZM_LOCK_IF=ZM_HMCS_IF -fopenmp
+thread_scale_dsm_CFLAGS = -DZM_LOCK_IF=ZM_DSM_IF -fopenmp
+thread_ws_scale_tkt_CFLAGS = -DZM_LOCK_IF=ZM_TICKET_IF -fopenmp
+thread_ws_scale_mcs_CFLAGS = -DZM_LOCK_IF=ZM_MCS_IF -fopenmp
 thread_ws_scale_hmcs_CFLAGS = -DZMTEST_USE_HMCS -fopenmp
 thread_scale_tlp_CFLAGS = -DZMTEST_USE_TLP -fopenmp
 thread_scale_mcsp_CFLAGS = -DZMTEST_USE_MCSP -fopenmp
