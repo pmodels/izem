@@ -10,6 +10,7 @@ zm_headers = \
 	include/queue/zm_queue_types.h \
 	include/queue/zm_glqueue.h \
 	include/queue/zm_swpqueue.h \
+	include/queue/zm_iswpqueue.h \
 	include/queue/zm_faqueue.h \
 	include/queue/zm_mpbqueue.h \
 	include/queue/zm_msqueue.h
