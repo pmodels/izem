@@ -13,6 +13,7 @@
 #define ZM_MCSP_IF      5
 #define ZM_TLP_IF       6
 #define ZM_DSM_IF       7
+#define ZM_IMCS_IF      8
 
 /* default lock interface */
 #define ZM_LOCK_IF @ZM_LOCK_IF@
@@ -51,6 +52,24 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_mcs_acquire_c(*(L), ctxt)
 #define zm_lock_acquire_lc(L, ctxt) zm_mcs_acquire_c(*(L), ctxt)
 #define zm_lock_release_c(L, ctxt)  zm_mcs_release_c(*(L), ctxt)
+#define zm_lock_csync(L, a, r)
+
+#elif ZM_LOCK_IF == ZM_IMCS_IF
+#include <lock/zm_imcs.h>
+/* types */
+#define zm_lock_t                   zm_mcs_t
+#define zm_lock_ctxt_t              zm_mcs_qnode_t
+#define zm_lock_init                zm_imcs_init
+#define zm_lock_destroy(L)          zm_imcs_destroy(L)
+/* Context-less routines */
+#define zm_lock_acquire(L)          zm_imcs_acquire(*(L))
+#define zm_lock_tryacq(L, acq)      zm_imcs_tryacq(*(L), acq)
+#define zm_lock_acquire_l(L)        zm_imcs_acquire(*(L))
+#define zm_lock_release(L)          zm_imcs_release(*(L))
+/* Context-full routines */
+#define zm_lock_acquire_c(L, ctxt)  zm_imcs_acquire(*(L))
+#define zm_lock_acquire_lc(L, ctxt) zm_imcs_acquire(*(L))
+#define zm_lock_release_c(L, ctxt)  zm_imcs_release(*(L))
 #define zm_lock_csync(L, a, r)
 
 #elif ZM_LOCK_IF == ZM_HMCS_IF

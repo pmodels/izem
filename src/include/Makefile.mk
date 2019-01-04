@@ -22,6 +22,7 @@ zm_headers += \
 	include/lock/zm_lock_types.h \
 	include/lock/zm_ticket.h \
 	include/lock/zm_mcs.h \
+	include/lock/zm_imcs.h \
 	include/lock/zm_mmcs.h \
 	include/lock/zm_tlp.h \
 	include/lock/zm_mcsp.h \
