@@ -11,5 +11,6 @@ zm_sources += \
 	queue/zm_mpbqueue.c \
 	queue/zm_msqueue.c \
 	queue/wfqueue.c \
-	queue/zm_dsmqueue.c
+	queue/zm_dsmqueue.c \
+	queue/zm_idsmqueue.c
 

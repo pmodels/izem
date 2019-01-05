@@ -29,6 +29,7 @@ zm_headers += \
 	include/lock/zm_hmcs.h \
 	include/lock/zm_hmpr.h \
 	include/lock/zm_dsmsync.h \
+	include/lock/zm_idsmsync.h \
 	include/cond/zm_cond.h \
 	include/cond/zm_cond_types.h \
 	include/cond/zm_ccond.h \

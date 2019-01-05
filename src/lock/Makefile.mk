@@ -11,4 +11,5 @@ zm_sources += \
 	lock/zm_mcsp.c \
 	lock/zm_hmcs.c \
 	lock/zm_hmpr.c \
-	lock/zm_dsmsync.c
+	lock/zm_dsmsync.c \
+	lock/zm_idsmsync.c
