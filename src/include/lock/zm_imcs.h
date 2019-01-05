@@ -8,7 +8,7 @@
 #include <hwloc.h>
 #include "lock/zm_mcs.h"
 
-extern zm_thread_local int tid = -1;
+extern zm_thread_local int tid;
 
 struct zm_mcs {
     zm_atomic_ptr_t lock;
@@ -20,10 +20,10 @@ static inline int mcs_acquire(struct zm_mcs *);
 static inline int mcs_tryacq(struct zm_mcs *, int *);
 static inline int mcs_release(struct zm_mcs *);
 
-int zm_imcs_init(zm_mcs_t *L) {
+static inline int zm_imcs_init(zm_mcs_t *L) {
     return zm_mcs_init(L);
 }
-int zm_imcs_destroy(zm_mcs_t *L) {
+static inline int zm_imcs_destroy(zm_mcs_t *L) {
     return zm_mcs_destroy(L);
 }
 
