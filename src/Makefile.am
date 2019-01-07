@@ -4,6 +4,7 @@
 #
 
 zm_sources =
+include $(top_srcdir)/src/common/Makefile.mk
 include $(top_srcdir)/src/mem/Makefile.mk
 if ZM_HAVE_HWLOC
 include $(top_srcdir)/src/lock/Makefile.mk

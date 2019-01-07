@@ -781,7 +781,7 @@ void queue_register(queue_t *q, handle_t *th) {
  *              izem wrappers
  ****************************************/
 
-zm_thread_local int tid = -1;
+extern zm_thread_local int tid;
 
 /* Check the actual affinity mask assigned to the thread */
 static inline void check_affinity(hwloc_topology_t topo) {

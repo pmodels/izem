@@ -70,8 +70,6 @@ struct lock{
     int levels;
 };
 
-static zm_thread_local int tid = -1;
-
 /* TODO: automate hardware topology detection
  * instead of the below hard-coded method */
 

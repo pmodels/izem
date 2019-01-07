@@ -19,6 +19,8 @@
 #define ZM_LOCKED 1
 #define ZM_UNLOCKED 0
 
+extern zm_thread_local int tid;
+
 typedef struct zm_ticket zm_ticket_t;
 
 struct zm_ticket {

@@ -14,8 +14,6 @@
 #define ZM_RECYCLE 3
 #define ZM_CHECK 4
 
-static zm_thread_local int tid = -1;
-
 /* Check the actual affinity mask assigned to the thread */
 static inline void check_affinity(hwloc_topology_t topo) {
     hwloc_cpuset_t cpuset = hwloc_bitmap_alloc();

@@ -5,8 +5,6 @@
 
 #ifndef _ZM_IMCS_H
 #define _ZM_IMCS_H
-extern zm_thread_local int tid;
-
 #include "common/zm_common.h"
 #include "lock/zm_lock_types.h"
 

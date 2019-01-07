@@ -14,8 +14,6 @@
 #define ZM_WAIT 1
 #define ZM_COMPLETE 2
 
-extern zm_thread_local int tid;
-
 typedef zm_ptr_t zm_dsm_t;
 
 struct idsm_qnode {
