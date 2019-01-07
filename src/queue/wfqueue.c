@@ -183,6 +183,18 @@ struct _handle_t {
 
 /* From: primitives.h */
 
+#if defined(CAS)
+#undef CAS
+#endif
+
+#if defined(SWAP)
+#undef SWAP
+#endif
+
+#if defined(STORE)
+#undef STORE
+#endif
+
 #if defined(__GNUC__) && __GNUC__ >= 4 && __GNUC_MINOR__ > 7
 /**
  * An atomic fetch-and-add.

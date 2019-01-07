@@ -117,7 +117,7 @@ static inline int wake(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     zm_mcs_qnode_t *pred = NULL;
     /* traverse queue until end or encountering a node that wasn't skipped */
     while ((zm_ptr_t)next != ZM_NULL) {
-        int status = ZM_WAIT;
+        status = ZM_WAIT;
         if(zm_atomic_compare_exchange_strong(&next->status,
                                          &status,
                                          ZM_WAKE,

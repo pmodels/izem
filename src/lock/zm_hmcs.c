@@ -415,15 +415,15 @@ static void* new_lock(){
         threshold = atoi(s);
 
     hwloc_obj_t obj;
-    for(int tid = 0 ; tid < max_threads; tid ++){
-        obj = hwloc_get_obj_by_type (L->topo, HWLOC_OBJ_PU, tid);
+    for(int thid = 0 ; thid < max_threads; thid ++){
+        obj = hwloc_get_obj_by_type (L->topo, HWLOC_OBJ_PU, thid);
         hwloc_set_cpubind(L->topo, obj->cpuset, HWLOC_CPUBIND_THREAD);
-        // Pin me to hw-thread-id = tid
+        // Pin me to hw-thread-id = thid
         int last_lock_location_end = 0;
         for(int cur_level = 0 ; cur_level < levels; cur_level++){
-            if (tid%participants_at_level[cur_level] == 0) {
+            if (thid%participants_at_level[cur_level] == 0) {
                 // master, initialize the lock
-                int lock_location = last_lock_location_end + tid/participants_at_level[cur_level];
+                int lock_location = last_lock_location_end + thid/participants_at_level[cur_level];
                 last_lock_location_end += max_threads/participants_at_level[cur_level];
                 struct hnode * cur_hnode = new_hnode();
                 cur_hnode->threshold = threshold;
@@ -435,19 +435,19 @@ static void* new_lock(){
     }
 
     // setup parents
-    for(int tid = 0 ; tid < max_threads; tid ++){
-        obj = hwloc_get_obj_by_type (L->topo, HWLOC_OBJ_PU, tid);
+    for(int thid = 0 ; thid < max_threads; thid ++){
+        obj = hwloc_get_obj_by_type (L->topo, HWLOC_OBJ_PU, thid);
         hwloc_set_cpubind(L->topo, obj->cpuset, HWLOC_CPUBIND_THREAD);
         int last_lock_location_end = 0;
         for(int cur_level = 0 ; cur_level < levels - 1; cur_level++){
-            if (tid%participants_at_level[cur_level] == 0) {
-                int lock_location = last_lock_location_end + tid/participants_at_level[cur_level];
+            if (thid%participants_at_level[cur_level] == 0) {
+                int lock_location = last_lock_location_end + thid/participants_at_level[cur_level];
                 last_lock_location_end += max_threads/participants_at_level[cur_level];
-                int parentLockLocation = last_lock_location_end + tid/participants_at_level[cur_level+1];
+                int parentLockLocation = last_lock_location_end + thid/participants_at_level[cur_level+1];
                 lock_locations[lock_location]->parent = lock_locations[parentLockLocation];
             }
         }
-        leaf_nodes[tid] = (struct leaf*)new_leaf(lock_locations[tid/participants_at_level[0]], levels);
+        leaf_nodes[thid] = (struct leaf*)new_leaf(lock_locations[thid/participants_at_level[0]], levels);
     }
     free(lock_locations);
     free_hierarchy(participants_at_level);
@@ -480,9 +480,9 @@ static void free_lock(struct lock* L) {
     int max_threads = hwloc_get_nbobjs_by_type(L->topo, HWLOC_OBJ_PU);
     int num_ptrs = 0;
     struct hnode **nodes_to_free = (struct hnode**) malloc(2*max_threads*sizeof(struct hnode*));
-    for (int tid = 0; tid < max_threads; tid++) {
-        search_nodes_rec(L->leaf_nodes[tid]->cur_node, nodes_to_free, &num_ptrs, max_threads);
-        free(L->leaf_nodes[tid]);
+    for (int thid = 0; thid < max_threads; thid++) {
+        search_nodes_rec(L->leaf_nodes[thid]->cur_node, nodes_to_free, &num_ptrs, max_threads);
+        free(L->leaf_nodes[thid]);
     }
     free(L->leaf_nodes);
     for(int i = 0; i < num_ptrs; i++)
