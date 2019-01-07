@@ -39,7 +39,7 @@ int zm_scount_signal(struct zm_scount *C, int *out_count) {
 }
 
 /* Forced wake up regardless of the counter */
-int zm_scond_signalf(struct zm_scount *C) {
+int zm_scount_signalf(struct zm_scount *C) {
     int ret = 0;
     /* wakeup signal regardless of the counter value */
     ret = zm_ccond_signal(&C->cvar);
