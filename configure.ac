@@ -196,6 +196,7 @@ AC_ARG_WITH([lock_if],
                           underlying lock to be used. Possible values are:
                           tkt  - Ticket
                           mcs  - MCS
+                          imcs - inlined version of MCS
                           mmcs - Memorizing MCS. It memorizes the local
                                  context of the lock holder. It allows
                                  reacquiring and releasing the lock without
@@ -214,6 +215,9 @@ case "$with_lock_if" in
     ;;
     mcs)
         ZM_LOCK_IF=ZM_MCS_IF
+    ;;
+    imcs)
+        ZM_LOCK_IF=ZM_IMCS_IF
     ;;
     mmcs)
         ZM_LOCK_IF=ZM_MMCS_IF
@@ -319,6 +323,7 @@ AC_ARG_WITH([queue_if],
                           gl   - Global lock (both enq and deq compete for the same lock)
                           ms   - Michael and Scott''s nonblocking queue (PODC''96)
                           swp  - SWAP-based MPSC queue inspired by the MCS lock
+                          iswp - inlined version of swp
                           wf   - FAA-based MPMC wait-free queue (Yang, PPoPP''16
                           fa   - FAA-based MPSC queue derived from WF (Yang, PPoPP''16)
                           runtime - Runtime selection through ZM_QUEUE_IF environment variable
@@ -334,6 +339,9 @@ case "$with_queue_if" in
     ;;
     swp)
         ZM_QUEUE_CONF=ZM_SWPQUEUE_IF
+    ;;
+    iswp)
+        ZM_QUEUE_CONF=ZM_ISWPQUEUE_IF
     ;;
     wf)
         ZM_QUEUE_CONF=ZM_WFQUEUE_IF
