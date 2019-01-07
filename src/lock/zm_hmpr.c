@@ -41,7 +41,7 @@ int zm_hmpr_acquire(struct zm_hmpr *L, struct zm_hmpr_pnode *N) {
 }
 
 int zm_hmpr_release(struct zm_hmpr *L, struct zm_hmpr_pnode *N) {
-    int ret;
+    int ret = 0;
     if (!L->low_p_acq) {
         if (zm_hmcs_nowaiters(L->lock)) {
             L->go_straight = 0;
