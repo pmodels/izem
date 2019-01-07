@@ -22,7 +22,7 @@ int zm_dsmqueue_init(zm_dsmqueue_t *q) {
     return 0;
 }
 
-void apply_enq(void *args) {
+static void apply_enq(void *args) {
     struct qdpair *pair = (struct qdpair *) args;
     zm_dsmqueue_t *q = pair->q;
     void *data = *pair->data;
@@ -33,7 +33,7 @@ void apply_enq(void *args) {
     q->tail = (zm_ptr_t)node;
 }
 
-void apply_deq(void *args) {
+static void apply_deq(void *args) {
     struct qdpair *pair = (struct qdpair *) args;
     zm_dsmqueue_t *q = pair->q;
     void **data = pair->data;

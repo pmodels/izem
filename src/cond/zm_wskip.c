@@ -170,7 +170,7 @@ static inline int nowaiters(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     return (zm_atomic_load(&I->next, zm_memord_acquire) == ZM_NULL);
 }
 
-int wskip_wait(struct zm_mcs *L, zm_mcs_qnode_t** I) {
+static inline int wskip_wait(struct zm_mcs *L, zm_mcs_qnode_t** I) {
     if (zm_unlikely(tid == -1)) {
         check_affinity(L->topo);
         tid = get_hwthread_id(L->topo);
@@ -179,20 +179,20 @@ int wskip_wait(struct zm_mcs *L, zm_mcs_qnode_t** I) {
     return wait(L, *I);
 }
 
-int wskip_enq(struct zm_mcs *L, zm_mcs_qnode_t *I) {
+static inline int wskip_enq(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     int wait; /* unused */
     return enq(L, I, &wait);
 }
 
-int wskip_wake(struct zm_mcs *L, zm_mcs_qnode_t *I) {
+static inline int wskip_wake(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     return wake(L, I);
 }
 
-int wskip_skip(zm_mcs_qnode_t *I) {
+static inline int wskip_skip(zm_mcs_qnode_t *I) {
     return skip(I);
 }
 
-int wskip_nowaiters(struct zm_mcs *L, zm_mcs_qnode_t *I) {
+static inline int wskip_nowaiters(struct zm_mcs *L, zm_mcs_qnode_t *I) {
     return nowaiters(L, I);
 }
 

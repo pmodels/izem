@@ -132,7 +132,7 @@ static inline int mcs_acquire_c(struct zm_mcs *L, zm_mcs_qnode_t* I) {
     return acquire_c(L, I);
 }
 
-int mcs_tryacq_c(struct zm_mcs *L, zm_mcs_qnode_t* I, int *success) {
+static inline int mcs_tryacq_c(struct zm_mcs *L, zm_mcs_qnode_t* I, int *success) {
     return tryacq_c(L, I, success);
 }
 

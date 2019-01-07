@@ -20,7 +20,7 @@
  */
 
 #include "lock/zm_lock_types.h"
-#include <hwloc.h>
+#include "lock/zm_hmcs.h"
 
 #ifndef DEFAULT_THRESHOLD
 #define DEFAULT_THRESHOLD 256

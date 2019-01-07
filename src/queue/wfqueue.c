@@ -528,7 +528,7 @@ static void enq_slow(queue_t *q, handle_t *th, void *v, long id) {
 #endif
 }
 
-void enqueue(queue_t *q, handle_t *th, void *v) {
+static inline void enqueue(queue_t *q, handle_t *th, void *v) {
     th->hzd_node_id = th->enq_node_id;
 
     long id;
@@ -667,7 +667,7 @@ static void *deq_slow(queue_t *q, handle_t *th, long id) {
     return val == TOP ? BOT : val;
 }
 
-void *dequeue(queue_t *q, handle_t *th) {
+static inline void *dequeue(queue_t *q, handle_t *th) {
     th->hzd_node_id = th->deq_node_id;
 
     void *v;
@@ -706,7 +706,7 @@ void *dequeue(queue_t *q, handle_t *th) {
 
 void queue_register(queue_t*, handle_t*);
 
-void queue_init(queue_t *q, int nprocs) {
+static void queue_init(queue_t *q, int nprocs) {
     q->Hi = 0;
     q->Hp = new_node();
 
@@ -727,7 +727,8 @@ void queue_init(queue_t *q, int nprocs) {
 #endif
 }
 
-void queue_free(queue_t *q, handle_t *h) {
+static void queue_free(queue_t *q, handle_t *h) __attribute__((unused));
+static void queue_free(queue_t *q, handle_t *h) {
 #ifdef RECORD
     static int lock = 0;
 
