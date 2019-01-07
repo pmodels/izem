@@ -7,12 +7,6 @@
 #include <hwloc.h>
 #include "lock/zm_mcs.h"
 
-struct zm_mcs {
-    zm_atomic_ptr_t lock;
-    struct zm_mcs_qnode *local_nodes;
-    hwloc_topology_t topo;
-};
-
 static zm_thread_local int tid = -1;
 
 /* Check the actual affinity mask assigned to the thread */

@@ -5,27 +5,17 @@
 
 #ifndef _ZM_IMCS_H
 #define _ZM_IMCS_H
-#include <hwloc.h>
-#include "lock/zm_mcs.h"
-
 extern zm_thread_local int tid;
 
-struct zm_mcs {
-    zm_atomic_ptr_t lock;
-    struct zm_mcs_qnode *local_nodes;
-    hwloc_topology_t topo;
-};
+#include "common/zm_common.h"
+#include "lock/zm_lock_types.h"
 
 static inline int mcs_acquire(struct zm_mcs *);
 static inline int mcs_tryacq(struct zm_mcs *, int *);
 static inline int mcs_release(struct zm_mcs *);
 
-static inline int zm_imcs_init(zm_mcs_t *L) {
-    return zm_mcs_init(L);
-}
-static inline int zm_imcs_destroy(zm_mcs_t *L) {
-    return zm_mcs_destroy(L);
-}
+int zm_imcs_init(zm_mcs_t *);
+int zm_imcs_destroy(zm_mcs_t *);
 
 static inline int zm_imcs_acquire(zm_mcs_t L) {
     return mcs_acquire((struct zm_mcs*)(void *)L) ;
