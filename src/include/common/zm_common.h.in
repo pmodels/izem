@@ -8,6 +8,8 @@
 #ifndef _ZM_COMMON_H
 #define _ZM_COMMON_H
 
+#include "zm_config.h"
+
 #if defined(__x86_64__)
 #define ZM_CACHELINE_SIZE 64
 #elif defined(__bgq__)
@@ -18,6 +20,14 @@
 #define ZM_CACHELINE_SIZE 128
 #else
 #error "Check your CPU architecture and set the appropriate macros in util.h"
+#endif
+
+#if defined(ZM_ALWAYS_INLINE)
+#define ZM_INLINE_PREFIX __attribute__((always_inline))
+#define ZM_INLINE_SUFFIX __attribute__((always_inline))
+#else
+#define ZM_INLINE_PREFIX
+#define ZM_INLINE_SUFFIX
 #endif
 
 #define ZM_ALLIGN_TO_CACHELINE __attribute__((aligned(ZM_CACHELINE_SIZE)))

@@ -125,7 +125,17 @@ IFS="$save_IFS"
 
 AS_IF([test "x$debug_flags" = "xyes"], [CFLAGS="$CFLAGS -g -O0 -Wall"])
 AS_IF([test "x$debug_log" = "xyes"],
-    [AC_DEFINE(ZM_CONFIG_USE_DEBUG_LOG, 1, [Define to enable debug logging])])
+    [AC_DEFINE(CONFIG_USE_DEBUG_LOG, 1, [Define to enable debug logging])])
+
+# inlining
+AC_ARG_ENABLE(always-inline,
+    AC_HELP_STRING([--enable-always-inline], [Enable always_inline on functions that have ZM_INLINE_SUFFIX (default is disabled, i.e., the compiler decides)]),
+    [enable_always_inline=yes],
+    [enable_always_inline=no])
+
+if test "x${enable_always_inline}" = "xyes"; then
+  AC_DEFINE([ALWAYS_INLINE], [1], [Define if always_inline to be used on ZM_INLINE_SUFFIX functions])
+fi
 
 # Testing for atomic
 
@@ -387,7 +397,8 @@ AC_PROG_INSTALL
 dnl ----------------------------------------------------------------------------
 dnl config headers
 dnl ----------------------------------------------------------------------------
-AC_CONFIG_HEADERS([src/include/zm_config.h])
+AC_CONFIG_HEADER([src/include/config.h])
+AX_PREFIX_CONFIG_H(src/include/zm_config.h, ZM)
 AH_TOP([
 /* -*- Mode: C; c-basic-offset:4 ; indent-tabs-mode:nil ; -*- */
 /*
