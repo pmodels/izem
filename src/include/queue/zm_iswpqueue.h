@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include "queue/zm_queue_types.h"
 
-static inline int zm_iswpqueue_init(zm_swpqueue_t *q) {
+ZM_INLINE_PREFIX static inline int zm_iswpqueue_init(zm_swpqueue_t *q) {
     zm_swpqnode_t* node = (zm_swpqnode_t*) malloc(sizeof(zm_swpqnode_t));
     node->data = NULL;
     node->next = ZM_NULL;
@@ -18,7 +18,7 @@ static inline int zm_iswpqueue_init(zm_swpqueue_t *q) {
     return 0;
 }
 
-static inline int zm_iswpqueue_enqueue(zm_swpqueue_t* q, void *data) {
+ZM_INLINE_PREFIX static inline int zm_iswpqueue_enqueue(zm_swpqueue_t* q, void *data) {
     zm_swpqnode_t* pred;
     zm_swpqnode_t* node = (zm_swpqnode_t*) malloc(sizeof(zm_swpqnode_t));
     node->data = data;
@@ -28,7 +28,7 @@ static inline int zm_iswpqueue_enqueue(zm_swpqueue_t* q, void *data) {
     return 0;
 }
 
-static inline int zm_iswpqueue_dequeue(zm_swpqueue_t* q, void **data) {
+ZM_INLINE_PREFIX static inline int zm_iswpqueue_dequeue(zm_swpqueue_t* q, void **data) {
     zm_swpqnode_t* head;
     zm_ptr_t next;
     *data = NULL;
@@ -44,14 +44,13 @@ static inline int zm_iswpqueue_dequeue(zm_swpqueue_t* q, void **data) {
     }
     return 1;
 }
-
-static inline int zm_iswpqueue_isempty_weak(zm_swpqueue_t* q) {
+ZM_INLINE_PREFIX static inline int zm_iswpqueue_isempty_weak(zm_swpqueue_t* q) {
     zm_swpqnode_t* head;
     head = (zm_swpqnode_t*) zm_atomic_load(&q->head, zm_memord_acquire);
     return (head->next == ZM_NULL);
 }
 
-static inline int zm_iswpqueue_isempty_strong(zm_swpqueue_t* q) {
+ZM_INLINE_PREFIX static inline int zm_iswpqueue_isempty_strong(zm_swpqueue_t* q) {
     zm_swpqnode_t* head, *tail;
     head = (zm_swpqnode_t*) zm_atomic_load(&q->head, zm_memord_acquire);
     tail = (zm_swpqnode_t*) zm_atomic_load(&q->tail, zm_memord_acquire);
