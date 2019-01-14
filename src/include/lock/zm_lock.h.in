@@ -37,6 +37,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_ticket_acquire(L)
 #define zm_lock_acquire_lc(L, ctxt) zm_ticket_acquire(L)
 #define zm_lock_release_c(L, ctxt)  zm_ticket_release(L)
+#define zm_lock_cacq(L, a)          zm_ticket_acquire(L)
 #define zm_lock_csync(L, a, r)
 
 #elif ZM_LOCK_IF == ZM_MCS_IF
@@ -55,6 +56,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_mcs_acquire_c(*(L), ctxt)
 #define zm_lock_acquire_lc(L, ctxt) zm_mcs_acquire_c(*(L), ctxt)
 #define zm_lock_release_c(L, ctxt)  zm_mcs_release_c(*(L), ctxt)
+#define zm_lock_cacq(L, a)          zm_mcs_acquire(*(L))
 #define zm_lock_csync(L, a, r)
 
 #elif ZM_LOCK_IF == ZM_IMCS_IF
@@ -73,6 +75,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_imcs_acquire(*(L))
 #define zm_lock_acquire_lc(L, ctxt) zm_imcs_acquire(*(L))
 #define zm_lock_release_c(L, ctxt)  zm_imcs_release(*(L))
+#define zm_lock_cacq(L, a)          zm_imcs_acquire(*(L))
 #define zm_lock_csync(L, a, r)
 
 #elif ZM_LOCK_IF == ZM_HMCS_IF
@@ -92,6 +95,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_hmcs_acquire(*(L))
 #define zm_lock_acquire_lc(L, ctxt) zm_hmcs_acquire(*(L))
 #define zm_lock_release_c(L, ctxt)  zm_hmcs_release(*(L))
+#define zm_lock_cacq(L, a)          zm_hmcs_acquire(*(L))
 #define zm_lock_csync(L, a, r)
 
 #elif ZM_LOCK_IF == ZM_MMCS_IF
@@ -106,6 +110,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_mmcs_acquire_c(L, ctxt)
 #define zm_lock_acquire_lc(L, ctxt) zm_mmcs_acquire_c(L, ctxt)
 #define zm_lock_release_c(L, ctxt)  zm_mmcs_release_c(L, ctxt)
+#define zm_lock_csync(L, a)
 #define zm_lock_csync(L, a, r)
 
 #elif ZM_LOCK_IF == ZM_TLP_IF
@@ -124,6 +129,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_tlp_acquire_c(L, ctxt)
 #define zm_lock_acquire_lc(L, ctxt) zm_tlp_acquire_low_c(L, ctxt)
 #define zm_lock_release_c(L, ctxt)  zm_tlp_release_c(L, ctxt)
+#define zm_lock_cacq(L, a)          zm_tlp_acquire(L)
 #define zm_lock_csync(L, a, r)
 
 #elif ZM_LOCK_IF == ZM_MCSP_IF
@@ -142,6 +148,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_mcsp_acquire_c(L, ctxt)
 #define zm_lock_acquire_lc(L, ctxt) zm_mcsp_acquire_low_c(L, ctxt)
 #define zm_lock_release_c(L, ctxt)  zm_mcsp_release_c(L, ctxt)
+#define zm_lock_cacq(L, a)          zm_mcsp_acquire(L)
 #define zm_lock_csync(L, a, r)
 
 #elif ZM_LOCK_IF == ZM_DSM_IF
@@ -160,6 +167,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_dsm_acquire(*(L))
 #define zm_lock_acquire_lc(L, ctxt) zm_dsm_acquire(*(L))
 #define zm_lock_release_c(L, ctxt)  zm_dsm_release(*(L))
+#define zm_lock_cacq(L, a)          zm_dsm_acquire(*(L))
 #define zm_lock_csync(L, a, r)      zm_dsm_sync(*(L), a, r)
 
 #elif ZM_LOCK_IF == ZM_IDSM_IF
@@ -178,6 +186,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_idsm_acquire(*(L))
 #define zm_lock_acquire_lc(L, ctxt) zm_idsm_acquire(*(L))
 #define zm_lock_release_c(L, ctxt)  zm_idsm_release(*(L))
+#define zm_lock_cacq(L, a)          zm_idsm_cacq(*(L), a)
 #define zm_lock_csync(L, a, r)      zm_idsm_sync(*(L), a, r)
 
 #else
