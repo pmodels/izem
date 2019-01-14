@@ -37,7 +37,7 @@ struct dsm {
     hwloc_topology_t topo;
 };
 
-static inline int acq_enq(struct dsm *D, struct idsm_tnode *tnode, void *req) {
+ZM_INLINE_PREFIX static inline int acq_enq(struct dsm *D, struct idsm_tnode *tnode, void *req) {
     struct idsm_qnode *local, *pred; /* "foo" = "qnode foo" */
 
     /* prepare my local node */
@@ -96,7 +96,7 @@ do {                                                                        \
     }                                                                       \
 } while (0)
 
-static inline int release (struct dsm *D, struct idsm_tnode *tnode) {
+ZM_INLINE_PREFIX static inline int release (struct dsm *D, struct idsm_tnode *tnode) {
     struct idsm_qnode *head = tnode->head;
 
     /* head either points at the head of the queue or NULL if my request got
@@ -141,7 +141,7 @@ do {                                                                        \
     combine(D, tnode, apply);                                               \
 } while (0)
 
-static inline int dsm_release (struct dsm *D, struct idsm_tnode *tnode) {
+ZM_INLINE_PREFIX static inline int dsm_release (struct dsm *D, struct idsm_tnode *tnode) {
     /* (1) release the combining queue lock */
     release(D, tnode);
     /* (2) release the mutual exclusion lock */
@@ -173,7 +173,7 @@ do {                                                                        \
     dsm_acquire(d, (&d->local_nodes[tid]), apply);                          \
 } while (0)
 
-static inline int zm_idsm_release(zm_dsm_t D) {
+ZM_INLINE_PREFIX static inline int zm_idsm_release(zm_dsm_t D) {
     struct dsm *d = (struct dsm*)(void *)D;
     if (zm_unlikely(tid == -1)) {
         check_affinity(d->topo);
