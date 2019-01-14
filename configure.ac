@@ -216,6 +216,7 @@ AC_ARG_WITH([lock_if],
                           tlp  - Generic Two-Level Priority
                           mcsp - Two-Level MCS lock
                           dsm  - DSM-Sync-enabled MCS lock
+                          idsm - inlined version of DSM-Sync
 ],,
 [with_lock_if=tkt])
 
@@ -243,6 +244,9 @@ case "$with_lock_if" in
     ;;
     dsm)
         ZM_LOCK_IF=ZM_DSM_IF
+    ;;
+    idsm)
+        ZM_LOCK_IF=ZM_IDSM_IF
     ;;
     *)
         AC_MSG_WARN([Unknown value $with_lock_if for with-lock-if])
