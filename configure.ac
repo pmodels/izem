@@ -213,6 +213,7 @@ AC_ARG_WITH([lock_if],
                                  bringing a local context. It is useful for
                                  lock passing in nested scopes (e.g., MPICH)
                           hmcs - Multilevel Hierarchical MCS (HMCS)
+                          ihmcs- inline version of HMCS
                           tlp  - Generic Two-Level Priority
                           mcsp - Two-Level MCS lock
                           dsm  - DSM-Sync-enabled MCS lock
@@ -235,6 +236,9 @@ case "$with_lock_if" in
     ;;
     hmcs)
         ZM_LOCK_IF=ZM_HMCS_IF
+    ;;
+    ihmcs)
+        ZM_LOCK_IF=ZM_IHMCS_IF
     ;;
     tlp)
         ZM_LOCK_IF=ZM_TLP_IF

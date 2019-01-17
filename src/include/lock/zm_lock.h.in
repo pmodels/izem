@@ -15,6 +15,7 @@
 #define ZM_DSM_IF       7
 #define ZM_IMCS_IF      8
 #define ZM_IDSM_IF      9
+#define ZM_IHMCS_IF     10
 
 /* default lock interface */
 #if !defined(ZM_LOCK_IF)
@@ -97,6 +98,27 @@
 #define zm_lock_release_c(L, ctxt)  zm_hmcs_release(*(L))
 #define zm_lock_cacq(L, a)          zm_hmcs_acquire(*(L))
 #define zm_lock_csync(L, a, r)
+
+#elif ZM_LOCK_IF == ZM_IHMCS_IF
+
+#include <lock/zm_ihmcs.h>
+/* types */
+#define zm_lock_t                   zm_hmcs_t
+#define zm_lock_ctxt_t              int /*dummy*/
+#define zm_lock_init                zm_ihmcs_init
+#define zm_lock_destroy             zm_ihmcs_destroy
+/* Context-less routines */
+#define zm_lock_acquire(L)          zm_ihmcs_acquire(*(L))
+#define zm_lock_tryacq(L, acq)      zm_ihmcs_tryacq(*(L), acq)
+#define zm_lock_acquire_l(L)        zm_ihmcs_acquire(*(L))
+#define zm_lock_release(L)          zm_ihmcs_release(*(L))
+/* Context-full routines */
+#define zm_lock_acquire_c(L, ctxt)  zm_ihmcs_acquire(*(L))
+#define zm_lock_acquire_lc(L, ctxt) zm_ihmcs_acquire(*(L))
+#define zm_lock_release_c(L, ctxt)  zm_ihmcs_release(*(L))
+#define zm_lock_cacq(L, a)          zm_ihmcs_acquire(*(L))
+#define zm_lock_csync(L, a, r)
+
 
 #elif ZM_LOCK_IF == ZM_MMCS_IF
 

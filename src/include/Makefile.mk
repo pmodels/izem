@@ -27,6 +27,7 @@ zm_headers += \
 	include/lock/zm_tlp.h \
 	include/lock/zm_mcsp.h \
 	include/lock/zm_hmcs.h \
+	include/lock/zm_ihmcs.h \
 	include/lock/zm_hmpr.h \
 	include/lock/zm_dsmsync.h \
 	include/lock/zm_idsmsync.h \
