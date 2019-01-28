@@ -144,6 +144,7 @@ do {                                                                        \
 ZM_INLINE_PREFIX static inline int dsm_acquire(struct dsm *D, struct idsm_tnode *tnode) {
     zm_imcs_acquire(D->lock);
     acq_enq(D, tnode, NULL);
+    tnode->head = &tnode->qnodes[tnode->toggle];
     return 0;
 }
 
