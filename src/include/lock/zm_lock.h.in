@@ -182,7 +182,7 @@
 #define zm_lock_destroy(L)          zm_dsm_destroy(L)
 /* Context-less routines */
 #define zm_lock_acquire(L)          zm_dsm_acquire(*(L))
-#define zm_lock_tryacq(L, acq)      zm_dsm_acquire(*(L))
+#define zm_lock_tryacq(L, acq)      do {zm_dsm_acquire(*(L)); *(acq) = 1;} while(0)
 #define zm_lock_acquire_l(L)        zm_dsm_acquire(*(L))
 #define zm_lock_release(L)          zm_dsm_release(*(L))
 /* Context-full routines */
@@ -201,7 +201,7 @@
 #define zm_lock_destroy(L)          zm_idsm_destroy(L)
 /* Context-less routines */
 #define zm_lock_acquire(L)          zm_idsm_acquire(*(L))
-#define zm_lock_tryacq(L, acq)      zm_idsm_acquire(*(L))
+#define zm_lock_tryacq(L, acq)      do {zm_idsm_acquire(*(L)); *(acq) = 1;} while(0)
 #define zm_lock_acquire_l(L)        zm_idsm_acquire(*(L))
 #define zm_lock_release(L)          zm_idsm_release(*(L))
 /* Context-full routines */
