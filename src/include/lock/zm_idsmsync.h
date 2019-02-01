@@ -67,6 +67,24 @@ ZM_INLINE_PREFIX static inline int acq_enq(struct dsm *D, struct idsm_tnode *tno
     return 0;
 }
 
+ZM_INLINE_PREFIX static inline int try_enq(struct dsm *D, struct idsm_tnode *tnode, void *req, int *success) {
+    int acquired  = 0;
+    /* prepare my local node */
+    int toggle = 1 - tnode->toggle;
+    struct idsm_qnode *local = &tnode->qnodes[toggle];
+    STORE(&local->status, ZM_WAIT);
+    STORE(&local->next, ZM_NULL);
+    local->req = req;
+
+    zm_ptr_t expected = ZM_NULL;
+    if(CAS(&D->tail, &expected, (zm_ptr_t)local)) {
+        tnode->toggle = toggle;
+        acquired = 1;
+    }
+    *success = acquired;
+    return 0;
+}
+
 #define combine(D, tnode, apply)                                            \
 do {                                                                        \
     struct idsm_qnode *head, *local;                                        \
@@ -141,6 +159,19 @@ do {                                                                        \
     combine(D, tnode, apply);                                               \
 } while (0)
 
+#define dsm_ctry(D, tnode, apply, success_p)                                \
+do {                                                                        \
+    zm_imcs_tryacq(D->lock, success_p);                                     \
+    if (*success_p) {                                                       \
+        try_enq(D, tnode, NULL, success_p);                                 \
+        if (*success_p)                                                     \
+            combine(D, tnode, apply);                                       \
+        else                                                               \
+            zm_imcs_release(D->lock);                                       \
+    }                                                                       \
+} while (0)
+
+
 ZM_INLINE_PREFIX static inline int dsm_acquire(struct dsm *D, struct idsm_tnode *tnode) {
     zm_imcs_acquire(D->lock);
     acq_enq(D, tnode, NULL);
@@ -178,6 +209,16 @@ do {                                                                        \
         tid = get_hwthread_id(d->topo);                                     \
     }                                                                       \
     dsm_cacq(d, (&d->local_nodes[tid]), apply);                             \
+} while (0)
+
+#define zm_idsm_ctry(D, apply, success_p)                                   \
+do {                                                                        \
+    struct dsm *d = (struct dsm*)(void *)D;                                 \
+    if (zm_unlikely(tid == -1)) {                                           \
+        check_affinity(d->topo);                                            \
+        tid = get_hwthread_id(d->topo);                                     \
+    }                                                                       \
+    dsm_ctry(d, (&d->local_nodes[tid]), apply, success_p);                  \
 } while (0)
 
 ZM_INLINE_PREFIX static inline int zm_idsm_acquire(zm_dsm_t D) {

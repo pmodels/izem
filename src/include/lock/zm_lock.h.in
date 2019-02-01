@@ -76,6 +76,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_imcs_acquire(*(L))
 #define zm_lock_acquire_lc(L, ctxt) zm_imcs_acquire(*(L))
 #define zm_lock_release_c(L, ctxt)  zm_imcs_release(*(L))
+#define zm_lock_ctry(L, a, acq)     zm_imcs_tryacq(*(L), acq)
 #define zm_lock_cacq(L, a)          zm_imcs_acquire(*(L))
 #define zm_lock_csync(L, a, r)
 
@@ -116,6 +117,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_ihmcs_acquire(*(L))
 #define zm_lock_acquire_lc(L, ctxt) zm_ihmcs_acquire(*(L))
 #define zm_lock_release_c(L, ctxt)  zm_ihmcs_release(*(L))
+#define zm_lock_ctry(L, a, acq)     zm_ihmcs_tryacq(*(L), acq)
 #define zm_lock_cacq(L, a)          zm_ihmcs_acquire(*(L))
 #define zm_lock_csync(L, a, r)
 
@@ -189,6 +191,7 @@
 #define zm_lock_acquire_c(L, ctxt)  zm_dsm_acquire(*(L))
 #define zm_lock_acquire_lc(L, ctxt) zm_dsm_acquire(*(L))
 #define zm_lock_release_c(L, ctxt)  zm_dsm_release(*(L))
+#define zm_lock_ctry(L, a, acq)      do {zm_dsm_acquire(*(L)); *(acq) = 1;} while(0)
 #define zm_lock_cacq(L, a)          zm_dsm_acquire(*(L))
 #define zm_lock_csync(L, a, r)      zm_dsm_sync(*(L), a, r)
 
@@ -209,6 +212,7 @@
 #define zm_lock_acquire_lc(L, ctxt) zm_idsm_acquire(*(L))
 #define zm_lock_release_c(L, ctxt)  zm_idsm_release(*(L))
 #define zm_lock_cacq(L, a)          zm_idsm_cacq(*(L), a)
+#define zm_lock_ctry(L, a, acq)     zm_idsm_ctry(*(L), a, acq)
 #define zm_lock_csync(L, a, r)      zm_idsm_sync(*(L), a, r)
 
 #else
