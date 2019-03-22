@@ -10,6 +10,7 @@ TESTS = \
 	thread_scale_hmcs \
 	thread_scale_ihmcs \
 	thread_scale_dsm \
+	thread_scale_idsm \
 	thread_ws_scale_tkt \
 	thread_ws_scale_mcs \
 	thread_ws_scale_hmcs \
@@ -27,6 +28,7 @@ thread_scale_imcs_SOURCES = thread_scale.c
 thread_scale_hmcs_SOURCES = thread_scale.c
 thread_scale_ihmcs_SOURCES = thread_scale.c
 thread_scale_dsm_SOURCES = thread_scale.c
+thread_scale_idsm_SOURCES = thread_scale.c
 thread_ws_scale_tkt_SOURCES = thread_ws_scale.c
 thread_ws_scale_mcs_SOURCES = thread_ws_scale.c
 thread_ws_scale_hmcs_SOURCES = thread_ws_scale.c
@@ -39,6 +41,7 @@ thread_scale_imcs_CFLAGS = -DZM_LOCK_IF=ZM_IMCS_IF -fopenmp
 thread_scale_hmcs_CFLAGS = -DZM_LOCK_IF=ZM_HMCS_IF -fopenmp
 thread_scale_ihmcs_CFLAGS = -DZM_LOCK_IF=ZM_IHMCS_IF -fopenmp
 thread_scale_dsm_CFLAGS = -DZM_LOCK_IF=ZM_DSM_IF -fopenmp
+thread_scale_idsm_CFLAGS = -DZM_LOCK_IF=ZM_IDSM_IF -fopenmp
 thread_ws_scale_tkt_CFLAGS = -DZM_LOCK_IF=ZM_TICKET_IF -fopenmp
 thread_ws_scale_mcs_CFLAGS = -DZM_LOCK_IF=ZM_MCS_IF -fopenmp
 thread_ws_scale_hmcs_CFLAGS = -DZMTEST_USE_HMCS -fopenmp
@@ -51,6 +54,7 @@ thread_scale_imcs_LDFLAGS = -fopenmp
 thread_scale_hmcs_LDFLAGS = -fopenmp -lstdc++
 thread_scale_ihmcs_LDFLAGS = -fopenmp -lstdc++
 thread_scale_dsm_LDFLAGS = -fopenmp
+thread_scale_idsm_LDFLAGS = -fopenmp
 thread_ws_scale_tkt_LDFLAGS = -fopenmp
 thread_ws_scale_mcs_LDFLAGS = -fopenmp
 thread_ws_scale_hmcs_LDFLAGS = -fopenmp
