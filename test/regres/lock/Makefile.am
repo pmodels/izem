@@ -17,7 +17,8 @@ TESTS = \
 	tryacq_imcs \
 	tryacq_tlp \
 	tryacq_hmcs \
-	hmpr_thruput
+	hmpr_thruput \
+	idsm
 
 XFAIL_TESTS =
 
@@ -40,6 +41,7 @@ tryacq_imcs_SOURCES = cs_thruput.c
 tryacq_tlp_SOURCES = cs_thruput.c
 tryacq_hmcs_SOURCES = cs_thruput.c
 hmpr_thruput_SOURCES = hmpr_thruput.c
+idsm_SOURCES = idsm.c
 
 cs_thruput_tkt_CFLAGS = -DZM_LOCK_IF=ZM_TICKET_IF -D_GNU_SOURCE
 cs_thruput_mcs_CFLAGS = -DZM_LOCK_IF=ZM_MCS_IF -D_GNU_SOURCE
@@ -55,6 +57,7 @@ tryacq_imcs_CFLAGS = -DZM_LOCK_IF=ZM_IMCS_IF -D_GNU_SOURCE
 tryacq_tlp_CFLAGS = -DZM_LOCK_IF=ZM_TLP_IF -D_GNU_SOURCE
 tryacq_hmcs_CFLAGS = -DZM_LOCK_IF=ZM_HMCS_IF -D_GNU_SOURCE
 hmpr_thruput_CFLAGS = -D_GNU_SOURCE
+idsm_CFLAGS = -D_GNU_SOURCE
 
 cs_thruput_tkt_LDFLAGS = -pthread
 cs_thruput_mcs_LDFLAGS = -pthread
@@ -70,3 +73,4 @@ tryacq_imcs_LDFLAGS = -pthread
 tryacq_tlp_LDFLAGS = -pthread
 tryacq_hmcs_LDFLAGS = -pthread
 hmpr_thruput_LDFLAGS = -pthread
+idsm_LDFLAGS = -pthread
