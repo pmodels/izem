@@ -137,7 +137,6 @@ ZM_INLINE_PREFIX static inline int release (struct dsm *D, struct idsm_tnode *tn
      * either way, elect the next thread as the combiner.
      */
     STORE(&((struct idsm_qnode*)LOAD(&head->next))->status, ZM_UNLOCKED);
-    STORE(&head->next, ZM_NULL);
 
     return 0;
 }
