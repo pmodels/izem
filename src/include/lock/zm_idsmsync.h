@@ -59,9 +59,6 @@ ZM_INLINE_PREFIX static inline int acq_enq(struct dsm *D, struct idsm_tnode *tno
         STORE(&pred->next, (zm_ptr_t)local);
         while(LOAD(&local->status) == ZM_WAIT)
             /* NOP */;
-        /* if my request got completed then return */
-        if(LOAD(&local->status) == ZM_COMPLETE)
-            return 0;
     }
 
     return 0;
