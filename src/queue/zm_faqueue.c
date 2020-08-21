@@ -22,8 +22,6 @@ static inline zm_faseg_t *zm_faseg_alloc(zm_ulong_t seg_id) {
 }
 
 static inline void zm_faseg_free(zm_faseg_t *seg) {
-    zm_hzdptr_t *hzdptrs = zm_hzdptr_get();
-    hzdptrs[0] <- (zm_ptr_t)seg;
     zm_hzdptr_retire((zm_ptr_t)seg);
 }
 
