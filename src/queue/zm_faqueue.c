@@ -96,7 +96,7 @@ int zm_faqueue_dequeue(zm_faqueue_t* q, void **data) {
         assert(seg_id == seg_head->id);
     }
 
-    if ((seg_head->cells[cell_disp].data == ZM_FAQUEUE_ALPHA)) /* general case of empty q */
+    if (seg_head->cells[cell_disp].data == ZM_FAQUEUE_ALPHA) /* general case of empty q */
         return 0;
     else {
         *data = seg_head->cells[cell_disp].data;
